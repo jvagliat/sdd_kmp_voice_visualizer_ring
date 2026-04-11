@@ -2,6 +2,7 @@ package com.iattraxia.kmp_voice_ring.player
 
 import com.iattraxia.kmp_voice_ring.audio.AmplitudeTrack
 import com.iattraxia.kmp_voice_ring.audio.parseWavAmplitudes
+import com.iattraxia.kmp_voice_ring.debug.FpsMeter
 import com.iattraxia.kmp_voice_ring.platform.writeBytesToCache
 import io.github.hyochan.audio.AudioRecorderPlayer
 import io.github.hyochan.audio.AudioSource
@@ -38,6 +39,9 @@ class PlayerViewModel(
     private val _durationMs = MutableStateFlow(0L)
     val durationMs: StateFlow<Long> = _durationMs.asStateFlow()
 
+    private val volumeFpsMeter = FpsMeter()
+    val volumeFps: StateFlow<Float> = volumeFpsMeter.fps
+
     private var amplitudes: AmplitudeTrack? = null
     private var cachedPath: String? = null
 
@@ -52,6 +56,7 @@ class PlayerViewModel(
                     .toInt()
                     .coerceIn(0, track.buckets.size - 1)
                 _volume.value = track.buckets[idx]
+                volumeFpsMeter.tick()
             }
 
             if (progress.duration > 0L &&

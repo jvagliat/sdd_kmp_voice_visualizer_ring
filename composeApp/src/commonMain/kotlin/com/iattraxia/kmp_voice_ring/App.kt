@@ -1,5 +1,6 @@
 package com.iattraxia.kmp_voice_ring
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,11 +23,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.iattraxia.kmp_voice_ring.debug.FpsMeter
 import com.iattraxia.kmp_voice_ring.player.PlayerState
 import com.iattraxia.kmp_voice_ring.player.PlayerViewModel
 import com.iattraxia.kmp_voice_ring.player.createPlayer
@@ -44,8 +48,17 @@ fun App() {
         val volume by viewModel.volume.collectAsState()
         val positionMs by viewModel.positionMs.collectAsState()
         val durationMs by viewModel.durationMs.collectAsState()
+        val volumeFps by viewModel.volumeFps.collectAsState()
+
+        val frameFpsMeter = remember { FpsMeter() }
+        val drawFpsMeter = remember { FpsMeter() }
+        val frameFps by frameFpsMeter.fps.collectAsState()
+        val drawFps by drawFpsMeter.fps.collectAsState()
 
         LaunchedEffect(Unit) { viewModel.load(ASSET_PATH) }
+        LaunchedEffect(Unit) {
+            while (true) withFrameMillis { frameFpsMeter.tick() }
+        }
         DisposableEffect(Unit) { onDispose { viewModel.dispose() } }
 
         Box(
@@ -64,7 +77,16 @@ fun App() {
                         .background(Color(0xFF111827)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    DebugPanel(state, volume, positionMs, durationMs)
+                    DebugPanel(
+                        state = state,
+                        volume = volume,
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        volumeFps = volumeFps,
+                        frameFps = frameFps,
+                        drawFps = drawFps,
+                        drawFpsMeter = drawFpsMeter,
+                    )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -94,6 +116,10 @@ private fun DebugPanel(
     volume: Float,
     positionMs: Long,
     durationMs: Long,
+    volumeFps: Float,
+    frameFps: Float,
+    drawFps: Float,
+    drawFpsMeter: FpsMeter,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -115,6 +141,22 @@ private fun DebugPanel(
         Spacer(Modifier.height(6.dp))
         val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
         Text("vol:  $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "fps volume: ${volumeFps.fmt1()}",
+            color = Color(0xFF22D3EE),
+            fontFamily = FontFamily.Monospace,
+        )
+        Text(
+            "fps frame:  ${frameFps.fmt1()}",
+            color = Color(0xFF22D3EE),
+            fontFamily = FontFamily.Monospace,
+        )
+        Text(
+            "fps draw:   ${drawFps.fmt1()}",
+            color = Color(0xFF22D3EE),
+            fontFamily = FontFamily.Monospace,
+        )
         Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
@@ -129,7 +171,27 @@ private fun DebugPanel(
                     .background(Color(0xFF22D3EE)),
             )
         }
+        Spacer(Modifier.height(8.dp))
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(Color(0xFF1F2937)),
+        ) {
+            val v = volume.coerceIn(0f, 1f)
+            drawFpsMeter.tick()
+            drawCircle(
+                color = Color(0xFF22D3EE),
+                radius = 4f + v * 8f,
+                center = Offset(size.width / 2f, size.height / 2f),
+            )
+        }
     }
+}
+
+private fun Float.fmt1(): String {
+    val x = (this * 10f).toInt() / 10f
+    return x.toString()
 }
 
 private fun PlayerState.label(): String = when (this) {
