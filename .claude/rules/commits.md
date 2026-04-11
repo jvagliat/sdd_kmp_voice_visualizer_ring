@@ -6,6 +6,11 @@
 - Si una tarea grande se compone de pasos independientes, cada paso que deje el código estable merece su propio commit.
 - If unsure whether a change is self-contained, ask first.
 
+### Un commit = una pieza conceptual
+Si en un mismo working-tree change hay varias cosas que un lector del log necesitaría ver por separado (ej. una regla + un skill grande, una refactor + un feature, setup de tracking + contenido nuevo), **splitteá en commits separados** aunque sea tentador agruparlos porque "vienen juntos" en la misma sesión.
+
+**Test antes de commitear**: ¿el subject del commit cuenta toda la historia del cambio? Si tenés que decir "y también…" al explicarlo, splittear. En la duda entre 1 o 2 commits, hacé 2.
+
 ## Commit Message Format
 
 ### Structure
@@ -31,6 +36,7 @@ Lista viva — agregá nuevos cuando aparezcan capas/dominios estables:
 - `Platform` — helpers expect/actual genéricos no ligados a un dominio (filesystem, permisos, etc.)
 - `Build` — Gradle, versiones, configuración de build
 - `Docs` — cambios en `AGENTS.md`, `SPEC.md`, `CLAUDE.md` (alternativa al formato `Filename: description`)
+- `Claude` — cambios en `.claude/` (meta-config del repo). Areas típicas: `Rules`, `CMP Skill`, `Commands`, `Agents`.
 
 ### Examples
 ```
@@ -46,6 +52,19 @@ Tests - Variants: add 88 tests for import and applicator
 pyproject.toml: remove readme field
 ARCHITECTURE.md: document pipeline replacement with importers+variants
 TASKS.md: mark phase 1.3 as completed
+```
+
+### Anti-ejemplo: commits que deben splittearse
+Incorrecto — un único commit mezclando setup de tracking, 3 rules files y un skill de 25 archivos:
+```
+.gitignore: track .claude/ config except settings.local.json
+```
+El subject no cuenta qué hay adentro; un lector del log no ve ni las rules ni el skill de CMP.
+
+Correcto — dos commits, cada uno con su pieza conceptual:
+```
+Claude - Rules: start tracking .claude/rules with project conventions
+Claude - CMP Skill: add jetpack-compose-expert reference bundle
 ```
 
 ### HEREDOC
