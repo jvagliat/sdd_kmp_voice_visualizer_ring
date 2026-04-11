@@ -19,7 +19,7 @@ captures
 node_modules/
 
 #
-.claude/
+.claude/settings.local.json
 AGENTS.md
 CLAUDE.md
 SPEC.md
