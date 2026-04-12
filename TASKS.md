@@ -42,6 +42,7 @@ Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJs.
 - [x] **T7** `VoiceVisualizerRing` implementado en commonMain con 4 versiones preservadas (V1→V4) + dispatcher delgado en `VoiceVisualizerRing.kt`. App.kt swap del slot 320.dp por el ring + DebugPanel reubicado debajo. Verificado visualmente por el usuario en JVM Win desktop. Recorrido: V1 (stacks rellenos, descartado por "onion ring"), V2 (clipPath strokes, descartado por 11 bandas duras + escalón en radii sin normalizar CSS), V3 (Modifier.blur + radii normalizados + blobs filled, descartado porque el blur preserva masa central → ring lleno), V4 (Modifier.blur + blobs STROKED en los 3 canvases con stroke widths escalonados → halo gaussiano sin masa central + 3 phase offsets visibles superpuestos). Cada Vx documenta hipótesis/approach/drawPath count/problemas en su header.
 - [x] **T10** Análisis en frío del prototipo HTML → `docs/html_analysis.md`. 13 efectos listados + tabla + elaboración en 5 bloques físicos (silueta, halo, multiplicidad, reactividad, smoothing). Síntesis: super-ellipse rotante de 8 s replicado 3 veces con phase offsets, halo gaussiano simétrico in/out, scale+opacity lerpeados desde FFT banda vocal media.
 - [x] **T11** Contraste HTML vs V4 → `docs/html_vs_v4.md`. Esqueleto 1:1 (morph + rotación + phase offsets + scale/brightness). Halo reimplementado con `Modifier.blur` sobre strokes en vez de `box-shadow` apilados. Gap funcional principal: RMS total vs FFT banda vocal (origen de T14).
+- [x] **T17** Selector de asset + toggle `band-energy` en `DebugEffectsPanel` (bottom-end) + re-load keyed en `LaunchedEffect(assetIndex, useBandEnergy)`. `PlayerViewModel.load()` hace stop-if-playing y resetea `positionMs`/`volume` antes de reparsear, para evitar que el listener mapee posición vieja sobre buckets nuevos. Verificado por el usuario en JVM desktop (captura adjunta).
 
 ## In progress
 - [ ] **T15 — Preprocesar nuevo WAV demo del cliente.** Subtareas:
@@ -58,28 +59,29 @@ Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJs.
 
 - [ ] **T16 — Cargar el nuevo WAV en la App.** Subtareas:
   - [x] **T16a** `App.kt`: `ASSET_PATH = files/audio/demo_voice_prototype.wav`, `USE_BAND_ENERGY = true`.
-  - [ ] **T16b** Selector en DebugPanel — ver **T17**.
+  - [x] **T16b** Selector en DebugPanel — ver **T17**.
   - [ ] **T16c** Verificación end-to-end en JVM desktop — pendiente usuario.
 
 ## Pending
 ### T12 — iOS compatible? 
 VoiceVisualizerRing con los imports de androidx es compatible con iOS?
 
-### T17 — Selector de asset + modo de análisis en DebugPanel
-Hoy el asset y el flag `USE_BAND_ENERGY` son constantes hardcodeadas en `App.kt`. Para A/B en caliente (sin recompilar) agregar controles mínimos en el harness. Objetivo: iterar sobre T14e sin editar código.
+### T18 — Relayout mobile del harness
+El layout actual está pensado para desktop (1600×900 aprox): ring al centro con panel de métricas top-end y panel de controles bottom-end, ambos de 260.dp a la derecha. En mobile (pantalla angosta) eso no entra: los paneles comen el ring o se superponen.
 
-Subtareas:
-1. **T17a — Lista de assets.** Declarar en `App.kt` una lista fija `listOf("demo_voice_prototype.wav", "Jan_Morgenstern_-_01_-_Prelude.wav")` con path completo. El primero es el default.
-2. **T17b — UI en DebugPanel.** Agregar dos controles:
-   - Radio/segmented buttons para elegir asset (2 opciones).
-   - Toggle `Switch` o checkbox para `useBandEnergy`.
-   Ubicación sugerida: arriba del bloque `state:` del panel actual (arriba-derecha).
-3. **T17c — Recargar en caliente.** Cuando cambia asset o flag: `viewModel.stop()` → `viewModel.load(newPath, newFlag)`. Requiere que `PlayerViewModel` acepte re-`load()` (ya lo acepta — overwrite de `amplitudes`, `cachedPath` y vuelve a `Ready`). Confirmar que el listener no duplica ticks tras re-load.
-4. **T17d — Verificación.** Toggle entre Prelude y demo, y entre RMS y band-energy, sin cerrar la app. Ring debería reaccionar distinto al instante en cada combinación.
+Objetivo: que la app sea usable en Android/iOS sin reimplementar el ring ni perder los controles de debug.
 
-Notas:
-- Nada de persistencia (sin `remember` cross-launch ni settings). Sólo `mutableStateOf` en App.
-- Si agregar controles satura el panel visualmente, mover a un tercer panel o abajo de los sliders de `DebugEffectsPanel` (bottom-end).
+Ideas (elegir en implementación):
+- Detectar viewport angosto (e.g. `maxWidth < 600.dp` vía `BoxWithConstraints`) y apilar verticalmente: ring arriba (aspecto cuadrado), controles + métricas debajo en una `Column` scrolleable.
+- En mobile los paneles de debug podrían ir plegados en un drawer / bottom sheet / tabs (métricas | selector | sliders).
+- Play/Stop siempre visibles (barra fija abajo).
+- Paneles desktop intactos cuando hay espacio: branchar por breakpoint, no reescribir.
+
+Subtareas (por definir cuando se encare):
+1. **T18a** Probar en qué targets pasa (Android phone retrato, iOS sim). Capturar estado actual para referencia.
+2. **T18b** Introducir breakpoint (`BoxWithConstraints` en `App`) y layout mobile inicial — ring + controles apilados.
+3. **T18c** Decidir si los debug panels van detrás de un toggle (ej. ícono que abre drawer) o siempre visibles debajo del ring.
+4. **T18d** Verificación visual en ambos modos.
 
 ### T13 — Verificación end-to-end (por target, el usuario corre)
 Al terminar T7, pedir al usuario:
