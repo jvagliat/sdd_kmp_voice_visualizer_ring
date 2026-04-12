@@ -68,7 +68,6 @@ fun App() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0A0F1C)),
-            contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -76,9 +75,7 @@ fun App() {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
                     VoiceVisualizerRing(
@@ -104,25 +101,23 @@ fun App() {
                         Text("Stop")
                     }
                 }
+            }
 
-                Box(
-                    modifier = Modifier
-                        .width(520.dp)
-                        .wrapContentHeight()
-                        .background(Color(0xFF111827)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    DebugPanel(
-                        state = state,
-                        volume = volume,
-                        positionMs = positionMs,
-                        durationMs = durationMs,
-                        volumeFps = volumeFps,
-                        frameFps = frameFps,
-                        drawFps = drawFps,
-                        drawFpsMeter = drawFpsMeter,
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp),
+            ) {
+                DebugPanel(
+                    state = state,
+                    volume = volume,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    volumeFps = volumeFps,
+                    frameFps = frameFps,
+                    drawFps = drawFps,
+                    drawFpsMeter = drawFpsMeter,
+                )
             }
         }
     }
@@ -140,61 +135,47 @@ private fun DebugPanel(
     drawFpsMeter: FpsMeter,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.width(260.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Start,
     ) {
+        Text("state: ${state.label()}", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "pos:  ${positionMs.toString().padStart(6)} ms",
+            color = Color(0xFFE5E7EB),
+            fontFamily = FontFamily.Monospace,
+        )
+        Text(
+            "dur:  ${durationMs.toString().padStart(6)} ms",
+            color = Color(0xFFE5E7EB),
+            fontFamily = FontFamily.Monospace,
+        )
+        Spacer(Modifier.height(6.dp))
         val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "state: ${state.label()}",
-                    color = Color(0xFFE5E7EB),
-                    fontFamily = FontFamily.Monospace,
-                )
-                Text(
-                    "pos:  ${positionMs.toString().padStart(6)} ms",
-                    color = Color(0xFFE5E7EB),
-                    fontFamily = FontFamily.Monospace,
-                )
-                Text(
-                    "dur:  ${durationMs.toString().padStart(6)} ms",
-                    color = Color(0xFFE5E7EB),
-                    fontFamily = FontFamily.Monospace,
-                )
-                Text(
-                    "vol:  $volTxt",
-                    color = Color(0xFFE5E7EB),
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "fps volume: ${volumeFps.fmt1()}",
-                    color = Color(0xFF22D3EE),
-                    fontFamily = FontFamily.Monospace,
-                )
-                Text(
-                    "fps frame:  ${frameFps.fmt1()}",
-                    color = Color(0xFF22D3EE),
-                    fontFamily = FontFamily.Monospace,
-                )
-                Text(
-                    "fps draw:   ${drawFps.fmt1()}",
-                    color = Color(0xFF22D3EE),
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-        }
+        Text("vol:  $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "fps volume: ${volumeFps.fmt1()}",
+            color = Color(0xFF22D3EE),
+            fontFamily = FontFamily.Monospace,
+        )
+        Text(
+            "fps frame:  ${frameFps.fmt1()}",
+            color = Color(0xFF22D3EE),
+            fontFamily = FontFamily.Monospace,
+        )
+        Text(
+            "fps draw:   ${drawFps.fmt1()}",
+            color = Color(0xFF22D3EE),
+            fontFamily = FontFamily.Monospace,
+        )
         Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(24.dp)
-                .background(Color(0xFF1F2937)),
+                .background(Color(0x331F2937)),
         ) {
             Box(
                 modifier = Modifier
@@ -208,7 +189,7 @@ private fun DebugPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(24.dp)
-                .background(Color(0xFF1F2937)),
+                .background(Color(0x331F2937)),
         ) {
             val v = volume.coerceIn(0f, 1f)
             drawFpsMeter.tick()
