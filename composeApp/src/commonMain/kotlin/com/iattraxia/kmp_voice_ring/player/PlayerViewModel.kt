@@ -5,6 +5,7 @@ import com.iattraxia.kmp_voice_ring.audio.parseWavAmplitudes
 import com.iattraxia.kmp_voice_ring.debug.FpsMeter
 import com.iattraxia.kmp_voice_ring.platform.writeBytesToCache
 import io.github.hyochan.audio.AudioRecorderPlayer
+import io.github.hyochan.audio.AudioRecorderPlayerProperties
 import io.github.hyochan.audio.AudioSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,7 @@ class PlayerViewModel(
     private var cachedPath: String? = null
 
     init {
+        player.setPlayerProperties(AudioRecorderPlayerProperties(updateIntervalMs = 16L))
         player.addPlaybackListener { progress ->
             _positionMs.value = progress.currentPosition
             if (progress.duration > 0L) _durationMs.value = progress.duration
