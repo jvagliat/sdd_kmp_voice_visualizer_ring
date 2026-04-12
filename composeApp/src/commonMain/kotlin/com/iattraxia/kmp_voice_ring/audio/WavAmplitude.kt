@@ -3,7 +3,7 @@ package com.iattraxia.kmp_voice_ring.audio
 import kotlin.math.sqrt
 
 data class AmplitudeTrack(
-    val bucketMs: Int,
+    val bucketMs: Double,
     val totalDurationMs: Long,
     val buckets: FloatArray,
 ) {
@@ -16,7 +16,7 @@ data class AmplitudeTrack(
     }
 
     override fun hashCode(): Int {
-        var result = bucketMs
+        var result = bucketMs.hashCode()
         result = 31 * result + totalDurationMs.hashCode()
         result = 31 * result + buckets.contentHashCode()
         return result
@@ -68,6 +68,7 @@ fun parseWavAmplitudes(bytes: ByteArray, bucketMs: Int = 16): AmplitudeTrack {
     val frameBytes = bytesPerSample * numChannels
     val totalFrames = dataSize / frameBytes
     val samplesPerBucket = (sampleRate.toLong() * bucketMs / 1000L).toInt().coerceAtLeast(1)
+    val actualBucketMs = samplesPerBucket.toDouble() * 1000.0 / sampleRate
     val bucketCount = (totalFrames + samplesPerBucket - 1) / samplesPerBucket
     val buckets = FloatArray(bucketCount)
     val maxAbs = when (bitsPerSample) {
@@ -112,7 +113,7 @@ fun parseWavAmplitudes(bytes: ByteArray, bucketMs: Int = 16): AmplitudeTrack {
     }
 
     val totalDurationMs = totalFrames.toLong() * 1000L / sampleRate
-    return AmplitudeTrack(bucketMs = bucketMs, totalDurationMs = totalDurationMs, buckets = buckets)
+    return AmplitudeTrack(bucketMs = actualBucketMs, totalDurationMs = totalDurationMs, buckets = buckets)
 }
 
 private fun readAscii(b: ByteArray, off: Int, len: Int): String {
