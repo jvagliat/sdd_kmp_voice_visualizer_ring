@@ -40,13 +40,56 @@ Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJs.
 - [x] **T6b** FPS meters: `FpsMeter` (ventana de 1s con `TimeSource.Monotonic`, stdlib only) + `volumeFps` en `PlayerViewModel` (tick dentro del listener), `frameFps` en `App` (via `withFrameMillis`), `drawFps` tickeado dentro de un `Canvas` stand-in que lee `volume`. Diagnóstico: volume ≈ 32 Hz (cuello en `updateIntervalMs` del plugin), frame = 60, draw sigue a volume sin drops.
 - [x] **T6c** Volume tick rate subido a ~60 Hz en JVM: `PlayerViewModel.init` llama `player.setPlayerProperties(AudioRecorderPlayerProperties(updateIntervalMs = 16L))` + workaround en `jvmMain/main.kt` (`raiseWindowsTimerResolution`: daemon thread parkeado en `Thread.sleep(Long.MAX_VALUE)` que activa `timeBeginPeriod(1)` process-wide en Windows, no-op en otros OS). Sin el hack, el default timer granularity de Windows (~15.6ms) capaba cualquier `delay(16)` a ~32Hz. Verificado por el usuario: `fps volume ≈ 58`, `fps draw ≈ 58`, `fps frame = 60`.
 - [x] **T7** `VoiceVisualizerRing` implementado en commonMain con 4 versiones preservadas (V1→V4) + dispatcher delgado en `VoiceVisualizerRing.kt`. App.kt swap del slot 320.dp por el ring + DebugPanel reubicado debajo. Verificado visualmente por el usuario en JVM Win desktop. Recorrido: V1 (stacks rellenos, descartado por "onion ring"), V2 (clipPath strokes, descartado por 11 bandas duras + escalón en radii sin normalizar CSS), V3 (Modifier.blur + radii normalizados + blobs filled, descartado porque el blur preserva masa central → ring lleno), V4 (Modifier.blur + blobs STROKED en los 3 canvases con stroke widths escalonados → halo gaussiano sin masa central + 3 phase offsets visibles superpuestos). Cada Vx documenta hipótesis/approach/drawPath count/problemas en su header.
+- [x] **T10** Análisis en frío del prototipo HTML → `docs/html_analysis.md`. 13 efectos listados + tabla + elaboración en 5 bloques físicos (silueta, halo, multiplicidad, reactividad, smoothing). Síntesis: super-ellipse rotante de 8 s replicado 3 veces con phase offsets, halo gaussiano simétrico in/out, scale+opacity lerpeados desde FFT banda vocal media.
+- [x] **T11** Contraste HTML vs V4 → `docs/html_vs_v4.md`. Esqueleto 1:1 (morph + rotación + phase offsets + scale/brightness). Halo reimplementado con `Modifier.blur` sobre strokes en vez de `box-shadow` apilados. Gap funcional principal: RMS total vs FFT banda vocal (origen de T14).
 
 ## In progress
-- [ ] nada
+- [ ] **T15 — Preprocesar nuevo WAV demo del cliente.** Subtareas:
+  - [x] **T15a** Asset copiado a `composeApp/src/commonMain/composeResources/files/audio/demo_voice_prototype.wav` (convive con el Prelude).
+  - [x] **T15b** Specs verificadas: PCM1, 2 ch, 44100 Hz, 16-bit. Parser T4 lo come sin cambios.
+  - [ ] **T15c** Trim/normalización — por ahora crudo; abrir si rompe la escala.
+
+- [ ] **T14 — FFT banda vocal media (réplica prototipo HTML).** Implementado. Decisiones aplicadas: conviven ambos parsers, L+R → mono, normalización p99. Subtareas:
+  - [x] **T14a** API: conviven `parseWavAmplitudes` (RMS) y `parseWavBandEnergies` (banda), toggleados por flag en el VM.
+  - [x] **T14b** `audio/Fft.kt` — radix-2 Cooley–Tukey stdlib-only, tablas sin/cos precomputadas + bit-reverse, tamaño 256.
+  - [x] **T14c** `audio/WavBandEnergy.kt` — L+R → mono, Blackman window (Web Audio default), FFT 256 / hop 128, smoothing IIR 0.85 por bin, dB `[-100,-30]` → byte 0..255, promedio bins 2..14 inclusive (13 bins), buckets 16 ms, normalización p99.
+  - [x] **T14d** `PlayerViewModel.load(path, useBandEnergy = false)` — default conserva comportamiento RMS, flag cambia al band-energy.
+  - [ ] **T14e** Verificación visual lado a lado con prototipo HTML — pendiente usuario.
+
+- [ ] **T16 — Cargar el nuevo WAV en la App.** Subtareas:
+  - [x] **T16a** `App.kt`: `ASSET_PATH = files/audio/demo_voice_prototype.wav`, `USE_BAND_ENERGY = true`.
+  - [ ] **T16b** Selector en DebugPanel — ver **T17**.
+  - [ ] **T16c** Verificación end-to-end en JVM desktop — pendiente usuario.
 
 ## Pending
+### T12 — iOS compatible? 
+VoiceVisualizerRing con los imports de androidx es compatible con iOS?
 
-### T10 — Verificación end-to-end (por target, el usuario corre)
+### T17 — Selector de asset + modo de análisis en DebugPanel
+Hoy el asset y el flag `USE_BAND_ENERGY` son constantes hardcodeadas en `App.kt`. Para A/B en caliente (sin recompilar) agregar controles mínimos en el harness. Objetivo: iterar sobre T14e sin editar código.
+
+Subtareas:
+1. **T17a — Lista de assets.** Declarar en `App.kt` una lista fija `listOf("demo_voice_prototype.wav", "Jan_Morgenstern_-_01_-_Prelude.wav")` con path completo. El primero es el default.
+2. **T17b — UI en DebugPanel.** Agregar dos controles:
+   - Radio/segmented buttons para elegir asset (2 opciones).
+   - Toggle `Switch` o checkbox para `useBandEnergy`.
+   Ubicación sugerida: arriba del bloque `state:` del panel actual (arriba-derecha).
+3. **T17c — Recargar en caliente.** Cuando cambia asset o flag: `viewModel.stop()` → `viewModel.load(newPath, newFlag)`. Requiere que `PlayerViewModel` acepte re-`load()` (ya lo acepta — overwrite de `amplitudes`, `cachedPath` y vuelve a `Ready`). Confirmar que el listener no duplica ticks tras re-load.
+4. **T17d — Verificación.** Toggle entre Prelude y demo, y entre RMS y band-energy, sin cerrar la app. Ring debería reaccionar distinto al instante en cada combinación.
+
+Notas:
+- Nada de persistencia (sin `remember` cross-launch ni settings). Sólo `mutableStateOf` en App.
+- Si agregar controles satura el panel visualmente, mover a un tercer panel o abajo de los sliders de `DebugEffectsPanel` (bottom-end).
+
+### T13 — Verificación end-to-end (por target, el usuario corre)
+Al terminar T7, pedir al usuario:
+- **Desktop (JVM):** `./gradlew :composeApp:run` — ventana levanta, botón Play reproduce, blobs reaccionan al audio.
+- **Android:** `./gradlew :composeApp:installDebug` → Pixel u otro.
+- **iOS:** Xcode → iPhone sim.
+- **wasmJs:** `./gradlew :composeApp:wasmJsBrowserDevelopmentRun`.
+- Probar `lowPerformanceMode = true` (toggle temporal o default cambiado) y cambios dinámicos de `color`/`thickness`/`glowSpread`/`intensity`.
+
+### T13 — Verificación end-to-end (por target, el usuario corre)
 Al terminar T7, pedir al usuario:
 - **Desktop (JVM):** `./gradlew :composeApp:run` — ventana levanta, botón Play reproduce, blobs reaccionan al audio.
 - **Android:** `./gradlew :composeApp:installDebug` → Pixel u otro.
@@ -68,7 +111,7 @@ Al terminar T7, pedir al usuario:
 - Pipeline completo en JVM desktop: audio + player + VM + harness + FPS meters + ring visual reactivo, verificado por el usuario.
 - **Diagnóstico de performance:** `fps volume ≈ 58`, `fps frame = 60`, `fps draw ≈ 58`. El techo práctico en JVM Windows queda marcado por jitter del scheduler de coroutines, no por el plugin ni por Compose.
 - **Desviación de spec consciente en V4:** el spec prohibía `Modifier.blur` y pedía glow por strokes apilados; las pruebas V1/V2 mostraron que stack-of-strokes no escala a glow gaussiano suave (11 bandas visibles) y V3/V4 caen en `Modifier.blur` con `BlurredEdgeTreatment.Unbounded`. Documentado en los headers de cada Vx. Si esta desviación no es aceptable, se puede revertir a V2 cambiando una línea en el dispatcher.
-- **Próximo paso concreto:** T10 — verificar Android/iOS/wasmJs cuando el usuario lo pida.
+- **Próximo paso concreto:** T14e + T16c — usuario compila y verifica que el demo respira con la voz y no con los bajos. Después, T17 (selector en DebugPanel) para A/B en caliente.
 - **Notas pendientes:**
   - `Greeting.kt` sigue existiendo sin referencias — opcional borrar.
   - Android/iOS/wasmJs: `writeBytesToCache` tira `NotImplementedError` en runtime. Compila, pero no correr en esos targets todavía.
