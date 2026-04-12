@@ -18,14 +18,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +62,10 @@ fun App() {
         val frameFps by frameFpsMeter.fps.collectAsState()
         val drawFps by drawFpsMeter.fps.collectAsState()
 
+        var intensity by remember { mutableStateOf(1f) }
+        var thickness by remember { mutableStateOf(5f) }
+        var glowSpread by remember { mutableStateOf(1f) }
+
         LaunchedEffect(Unit) { viewModel.load(ASSET_PATH) }
         LaunchedEffect(Unit) {
             while (true) withFrameMillis { frameFpsMeter.tick() }
@@ -81,6 +89,9 @@ fun App() {
                     VoiceVisualizerRing(
                         volume = volume,
                         color = Color(0xFF00FFFF),
+                        intensity = intensity,
+                        thickness = thickness,
+                        glowSpread = glowSpread,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -117,6 +128,21 @@ fun App() {
                     frameFps = frameFps,
                     drawFps = drawFps,
                     drawFpsMeter = drawFpsMeter,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+            ) {
+                DebugEffectsPanel(
+                    intensity = intensity,
+                    onIntensityChange = { intensity = it },
+                    thickness = thickness,
+                    onThicknessChange = { thickness = it },
+                    glowSpread = glowSpread,
+                    onGlowSpreadChange = { glowSpread = it },
                 )
             }
         }
@@ -200,6 +226,67 @@ private fun DebugPanel(
             )
         }
     }
+}
+
+@Composable
+private fun DebugEffectsPanel(
+    intensity: Float,
+    onIntensityChange: (Float) -> Unit,
+    thickness: Float,
+    onThicknessChange: (Float) -> Unit,
+    glowSpread: Float,
+    onGlowSpreadChange: (Float) -> Unit,
+) {
+    Column(
+        modifier = Modifier.width(260.dp),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        EffectSlider(
+            label = "intensity",
+            value = intensity,
+            valueRange = 0f..3f,
+            onValueChange = onIntensityChange,
+        )
+        Spacer(Modifier.height(6.dp))
+        EffectSlider(
+            label = "thickness",
+            value = thickness,
+            valueRange = 0f..30f,
+            onValueChange = onThicknessChange,
+        )
+        Spacer(Modifier.height(6.dp))
+        EffectSlider(
+            label = "glowSpread",
+            value = glowSpread,
+            valueRange = 0f..3f,
+            onValueChange = onGlowSpreadChange,
+        )
+    }
+}
+
+@Composable
+private fun EffectSlider(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+) {
+    val valTxt = ((value * 100f).toInt() / 100f).toString()
+    Text(
+        "$label: $valTxt",
+        color = Color(0xFFE5E7EB),
+        fontFamily = FontFamily.Monospace,
+    )
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        colors = SliderDefaults.colors(
+            thumbColor = Color(0xFF22D3EE),
+            activeTrackColor = Color(0xFF22D3EE),
+            inactiveTrackColor = Color(0x331F2937),
+        ),
+    )
 }
 
 private fun Float.fmt1(): String {
