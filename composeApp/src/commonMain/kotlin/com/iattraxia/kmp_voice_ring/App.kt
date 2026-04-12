@@ -17,9 +17,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -42,8 +45,11 @@ import com.iattraxia.kmp_voice_ring.player.PlayerState
 import com.iattraxia.kmp_voice_ring.player.PlayerViewModel
 import com.iattraxia.kmp_voice_ring.player.createPlayer
 
-private const val ASSET_PATH = "files/audio/demo_voice_prototype.wav"
-private const val USE_BAND_ENERGY = true
+private val ASSET_PATHS = listOf(
+    "files/audio/demo_voice_prototype.wav",
+    "files/audio/Jan_Morgenstern_-_01_-_Prelude.wav",
+)
+private const val DEFAULT_USE_BAND_ENERGY = true
 
 @Composable
 fun App() {
@@ -67,7 +73,12 @@ fun App() {
         var thickness by remember { mutableStateOf(5f) }
         var glowSpread by remember { mutableStateOf(1f) }
 
-        LaunchedEffect(Unit) { viewModel.load(ASSET_PATH, useBandEnergy = USE_BAND_ENERGY) }
+        var assetIndex by remember { mutableStateOf(0) }
+        var useBandEnergy by remember { mutableStateOf(DEFAULT_USE_BAND_ENERGY) }
+
+        LaunchedEffect(assetIndex, useBandEnergy) {
+            viewModel.load(ASSET_PATHS[assetIndex], useBandEnergy = useBandEnergy)
+        }
         LaunchedEffect(Unit) {
             while (true) withFrameMillis { frameFpsMeter.tick() }
         }
@@ -144,6 +155,11 @@ fun App() {
                     onThicknessChange = { thickness = it },
                     glowSpread = glowSpread,
                     onGlowSpreadChange = { glowSpread = it },
+                    assetPaths = ASSET_PATHS,
+                    assetIndex = assetIndex,
+                    onAssetIndexChange = { assetIndex = it },
+                    useBandEnergy = useBandEnergy,
+                    onUseBandEnergyChange = { useBandEnergy = it },
                 )
             }
         }
@@ -230,6 +246,31 @@ private fun DebugPanel(
 }
 
 @Composable
+private fun AssetSelector(
+    assetPaths: List<String>,
+    assetIndex: Int,
+    onAssetIndexChange: (Int) -> Unit,
+) {
+    Column(horizontalAlignment = Alignment.Start) {
+        assetPaths.forEachIndexed { idx, path ->
+            val selected = idx == assetIndex
+            val label = path.substringAfterLast('/')
+            Button(
+                onClick = { if (!selected) onAssetIndexChange(idx) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selected) Color(0xFF22D3EE) else Color(0x331F2937),
+                    contentColor = if (selected) Color(0xFF0A0F1C) else Color(0xFFE5E7EB),
+                ),
+            ) {
+                Text(label, fontFamily = FontFamily.Monospace)
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+@Composable
 private fun DebugEffectsPanel(
     intensity: Float,
     onIntensityChange: (Float) -> Unit,
@@ -237,11 +278,41 @@ private fun DebugEffectsPanel(
     onThicknessChange: (Float) -> Unit,
     glowSpread: Float,
     onGlowSpreadChange: (Float) -> Unit,
+    assetPaths: List<String>,
+    assetIndex: Int,
+    onAssetIndexChange: (Int) -> Unit,
+    useBandEnergy: Boolean,
+    onUseBandEnergyChange: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier.width(260.dp),
         horizontalAlignment = Alignment.Start,
     ) {
+        AssetSelector(
+            assetPaths = assetPaths,
+            assetIndex = assetIndex,
+            onAssetIndexChange = onAssetIndexChange,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "band-energy",
+                color = Color(0xFFE5E7EB),
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = useBandEnergy,
+                onCheckedChange = onUseBandEnergyChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color(0xFF22D3EE),
+                    checkedTrackColor = Color(0x5522D3EE),
+                    uncheckedThumbColor = Color(0xFFE5E7EB),
+                    uncheckedTrackColor = Color(0x331F2937),
+                ),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
         EffectSlider(
             label = "intensity",
             value = intensity,
