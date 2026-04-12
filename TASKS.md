@@ -38,25 +38,13 @@ Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJs.
 - [x] **T5a** `PlayerViewModel` con `StateFlow<PlayerState>` (Idle/Loading/Ready/Playing/Paused/Error), `volume`, `positionMs`, `durationMs`. `load()` hace `Res.readBytes()` → `parseWavAmplitudes()` → `writeBytesToCache()`. Listener mapea `currentPosition / bucketMs` al índice de buckets. Al llegar a duration vuelve a Ready. → `da5a79c`
 - [x] **T6** Test harness: `App.kt` con fondo oscuro, `DebugPanel` provisional (barra de volumen + texto state/pos/dur/vol monoespaciado) en slot 320.dp, botones Play/Pause/Stop, `LaunchedEffect` carga asset, `DisposableEffect` limpia. → `1b48f04`
 - [x] **T6b** FPS meters: `FpsMeter` (ventana de 1s con `TimeSource.Monotonic`, stdlib only) + `volumeFps` en `PlayerViewModel` (tick dentro del listener), `frameFps` en `App` (via `withFrameMillis`), `drawFps` tickeado dentro de un `Canvas` stand-in que lee `volume`. Diagnóstico: volume ≈ 32 Hz (cuello en `updateIntervalMs` del plugin), frame = 60, draw sigue a volume sin drops.
+- [x] **T6c** Volume tick rate subido a ~60 Hz en JVM: `PlayerViewModel.init` llama `player.setPlayerProperties(AudioRecorderPlayerProperties(updateIntervalMs = 16L))` + workaround en `jvmMain/main.kt` (`raiseWindowsTimerResolution`: daemon thread parkeado en `Thread.sleep(Long.MAX_VALUE)` que activa `timeBeginPeriod(1)` process-wide en Windows, no-op en otros OS). Sin el hack, el default timer granularity de Windows (~15.6ms) capaba cualquier `delay(16)` a ~32Hz. Verificado por el usuario: `fps volume ≈ 58`, `fps draw ≈ 58`, `fps frame = 60`.
+- [x] **T7** `VoiceVisualizerRing` implementado en commonMain con 4 versiones preservadas (V1→V4) + dispatcher delgado en `VoiceVisualizerRing.kt`. App.kt swap del slot 320.dp por el ring + DebugPanel reubicado debajo. Verificado visualmente por el usuario en JVM Win desktop. Recorrido: V1 (stacks rellenos, descartado por "onion ring"), V2 (clipPath strokes, descartado por 11 bandas duras + escalón en radii sin normalizar CSS), V3 (Modifier.blur + radii normalizados + blobs filled, descartado porque el blur preserva masa central → ring lleno), V4 (Modifier.blur + blobs STROKED en los 3 canvases con stroke widths escalonados → halo gaussiano sin masa central + 3 phase offsets visibles superpuestos). Cada Vx documenta hipótesis/approach/drawPath count/problemas en su header.
 
 ## In progress
 - [ ] nada
 
 ## Pending
-
-### T7 — `VoiceVisualizerRing.kt`
-Nuevo archivo: `composeApp/src/commonMain/kotlin/com/iattraxia/kmp_voice_ring/VoiceVisualizerRing.kt`.
-Spec literal de `AGENTS.md` §"API del Componente" y `SPEC.md` §4-7.
-- Firma: `fun VoiceVisualizerRing(volume: Float, color: Color, intensity: Float = 1f, thickness: Float = 5f, glowSpread: Float = 1f, lowPerformanceMode: Boolean = false, modifier: Modifier = Modifier)`.
-- Constantes top-level `private`: `CYCLE_MS=8000L`, `LERP_FACTOR=0.15f`, `LAYER_COUNT=3`, `EASING = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)`, `PHASE_OFFSETS = floatArrayOf(0f, 0.3125f, 0.625f)`, `KEYFRAME_RADII` (Array<FloatArray> 3×8), `KEYFRAME_ROTATIONS = floatArrayOf(0f, 120f, 240f)`.
-- Loop: `LaunchedEffect(Unit) { while (true) withFrameMillis { ... } }`. Variables trackeadas en `remember { mutableStateOf(FrameSnapshot(...)) }`.
-  - `average = volume.coerceIn(0f,1f) * 255f`
-  - `targetScale = 1f + (average/500f)*intensity`
-  - `targetBright = 0.4f + (average/150f)*intensity`
-  - Lerp 0.15 en scale y bright.
-- `Canvas(modifier)`: `remember { Array(3) { Path() } }`. Por frame: `path[i].reset()`, recalcular 8 radios interpolados entre keyframes, construir con 4 esquinas × Bézier cúbico (k≈0.5522847498), `withTransform { scale(currentScale); rotate(rotDeg) { ... } }`, dibujar glow sublayers (spec §4.3 normal/low-perf), fill del blob, stroke de borde **solo en capa 0** con `thickness.dp.toPx()`.
-- `layerBright = (currentBright * (1f - i*0.2f)).coerceIn(0f, 1f)`.
-- **PROHIBIDO:** `@Preview`, `Modifier.blur`, allocs en `DrawScope`, `android.graphics`, `CoreGraphics`, `Skia` directo.
 
 ### T10 — Verificación end-to-end (por target, el usuario corre)
 Al terminar T7, pedir al usuario:
@@ -71,14 +59,16 @@ Al terminar T7, pedir al usuario:
 ## Blockers / notas abiertas
 - **wasmJs + filesystem:** diferido. Cuando toque activar wasmJs, hay que ver si `AudioSource.File(path)` del plugin acepta paths en ese target o toca blob URL. Plan B: "visualizer ok, playback no".
 - **Android wiring:** diferido. Cuando toque Android real, el actual de `writeBytesToCache` necesita un `AppContextHolder` singleton rellenado desde `MainActivity.onCreate` antes de `setContent`. El patrón es deuda del marco de prueba, no del componente.
+- **Android/iOS tick rate:** T6c sólo verificó el cambio en JVM. Los tickers nativos del plugin en Android/iOS pueden clampar internamente a un piso mayor que 16ms. Cuando toque correr en esos targets, verificar empíricamente con los meters y ver si hace falta interpolación del volume en el VM como fallback.
 
 ---
 
 ## Estado vivo (última actualización)
-- Último commit del feature: T6b (FPS meters).
-- Pipeline de audio + player + VM + harness + FPS diagnóstico funcionando en JVM desktop, verificado por el usuario.
-- **Diagnóstico de performance:** `fps volume ≈ 32`, `fps frame = 60`, `fps draw ≈ 32`. Compose no es el cuello; el ticker del plugin emite a ~32Hz con el `updateIntervalMs` default. Para llegar a 60Hz visuales hay que bajar `updateIntervalMs` a 16ms (el JVM actual tolera hasta 8ms).
-- **Próximo paso concreto:** T7 — implementar `VoiceVisualizerRing.kt` según spec literal de `AGENTS.md` + `SPEC.md`. Después swap del `DebugPanel` por el ring (o conviven) en `App.kt`. El ajuste de `updateIntervalMs` va como task aparte cuando toque.
+- Último commit del feature: T7 (`VoiceVisualizerRing` V4 activo + harness reorganizado).
+- Pipeline completo en JVM desktop: audio + player + VM + harness + FPS meters + ring visual reactivo, verificado por el usuario.
+- **Diagnóstico de performance:** `fps volume ≈ 58`, `fps frame = 60`, `fps draw ≈ 58`. El techo práctico en JVM Windows queda marcado por jitter del scheduler de coroutines, no por el plugin ni por Compose.
+- **Desviación de spec consciente en V4:** el spec prohibía `Modifier.blur` y pedía glow por strokes apilados; las pruebas V1/V2 mostraron que stack-of-strokes no escala a glow gaussiano suave (11 bandas visibles) y V3/V4 caen en `Modifier.blur` con `BlurredEdgeTreatment.Unbounded`. Documentado en los headers de cada Vx. Si esta desviación no es aceptable, se puede revertir a V2 cambiando una línea en el dispatcher.
+- **Próximo paso concreto:** T10 — verificar Android/iOS/wasmJs cuando el usuario lo pida.
 - **Notas pendientes:**
   - `Greeting.kt` sigue existiendo sin referencias — opcional borrar.
   - Android/iOS/wasmJs: `writeBytesToCache` tira `NotImplementedError` en runtime. Compila, pero no correr en esos targets todavía.
