@@ -2,6 +2,7 @@ package com.iattraxia.kmp_voice_ring.player
 
 import com.iattraxia.kmp_voice_ring.audio.AmplitudeTrack
 import com.iattraxia.kmp_voice_ring.audio.parseWavAmplitudes
+import com.iattraxia.kmp_voice_ring.audio.parseWavBandEnergies
 import com.iattraxia.kmp_voice_ring.debug.FpsMeter
 import com.iattraxia.kmp_voice_ring.platform.writeBytesToCache
 import io.github.hyochan.audio.AudioRecorderPlayer
@@ -73,11 +74,11 @@ class PlayerViewModel(
     }
 
     @OptIn(ExperimentalResourceApi::class)
-    suspend fun load(assetRelativePath: String) {
+    suspend fun load(assetRelativePath: String, useBandEnergy: Boolean = false) {
         _state.value = PlayerState.Loading
         try {
             val bytes = Res.readBytes(assetRelativePath)
-            val track = parseWavAmplitudes(bytes)
+            val track = if (useBandEnergy) parseWavBandEnergies(bytes) else parseWavAmplitudes(bytes)
             amplitudes = track
             _durationMs.value = track.totalDurationMs
 
