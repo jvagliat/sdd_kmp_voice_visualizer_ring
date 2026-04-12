@@ -75,6 +75,11 @@ class PlayerViewModel(
 
     @OptIn(ExperimentalResourceApi::class)
     suspend fun load(assetRelativePath: String, useBandEnergy: Boolean = false) {
+        if (_state.value == PlayerState.Playing || _state.value == PlayerState.Paused) {
+            player.stopPlaying()
+        }
+        _positionMs.value = 0L
+        _volume.value = 0f
         _state.value = PlayerState.Loading
         try {
             val bytes = Res.readBytes(assetRelativePath)
