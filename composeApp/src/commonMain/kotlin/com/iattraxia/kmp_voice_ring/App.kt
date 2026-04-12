@@ -42,7 +42,8 @@ import com.iattraxia.kmp_voice_ring.player.PlayerState
 import com.iattraxia.kmp_voice_ring.player.PlayerViewModel
 import com.iattraxia.kmp_voice_ring.player.createPlayer
 
-private const val ASSET_PATH = "files/audio/Jan_Morgenstern_-_01_-_Prelude.wav"
+private const val ASSET_PATH = "files/audio/demo_voice_prototype.wav"
+private const val USE_BAND_ENERGY = true
 
 @Composable
 fun App() {
@@ -66,7 +67,7 @@ fun App() {
         var thickness by remember { mutableStateOf(5f) }
         var glowSpread by remember { mutableStateOf(1f) }
 
-        LaunchedEffect(Unit) { viewModel.load(ASSET_PATH) }
+        LaunchedEffect(Unit) { viewModel.load(ASSET_PATH, useBandEnergy = USE_BAND_ENERGY) }
         LaunchedEffect(Unit) {
             while (true) withFrameMillis { frameFpsMeter.tick() }
         }
