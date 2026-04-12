@@ -7,12 +7,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -68,24 +71,20 @@ fun App() {
             contentAlignment = Alignment.Center,
         ) {
             Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Box(
                     modifier = Modifier
-                        .size(320.dp)
-                        .background(Color(0xFF111827)),
+                        .weight(1f)
+                        .aspectRatio(1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    DebugPanel(
-                        state = state,
+                    VoiceVisualizerRing(
                         volume = volume,
-                        positionMs = positionMs,
-                        durationMs = durationMs,
-                        volumeFps = volumeFps,
-                        frameFps = frameFps,
-                        drawFps = drawFps,
-                        drawFpsMeter = drawFpsMeter,
+                        color = Color(0xFF00FFFF),
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
@@ -105,6 +104,25 @@ fun App() {
                         Text("Stop")
                     }
                 }
+
+                Box(
+                    modifier = Modifier
+                        .width(520.dp)
+                        .wrapContentHeight()
+                        .background(Color(0xFF111827)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DebugPanel(
+                        state = state,
+                        volume = volume,
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        volumeFps = volumeFps,
+                        frameFps = frameFps,
+                        drawFps = drawFps,
+                        drawFpsMeter = drawFpsMeter,
+                    )
+                }
             }
         }
     }
@@ -122,41 +140,55 @@ private fun DebugPanel(
     drawFpsMeter: FpsMeter,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.Start,
     ) {
-        Text("state: ${state.label()}", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "pos:  ${positionMs.toString().padStart(6)} ms",
-            color = Color(0xFFE5E7EB),
-            fontFamily = FontFamily.Monospace,
-        )
-        Text(
-            "dur:  ${durationMs.toString().padStart(6)} ms",
-            color = Color(0xFFE5E7EB),
-            fontFamily = FontFamily.Monospace,
-        )
-        Spacer(Modifier.height(6.dp))
         val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
-        Text("vol:  $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "fps volume: ${volumeFps.fmt1()}",
-            color = Color(0xFF22D3EE),
-            fontFamily = FontFamily.Monospace,
-        )
-        Text(
-            "fps frame:  ${frameFps.fmt1()}",
-            color = Color(0xFF22D3EE),
-            fontFamily = FontFamily.Monospace,
-        )
-        Text(
-            "fps draw:   ${drawFps.fmt1()}",
-            color = Color(0xFF22D3EE),
-            fontFamily = FontFamily.Monospace,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "state: ${state.label()}",
+                    color = Color(0xFFE5E7EB),
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    "pos:  ${positionMs.toString().padStart(6)} ms",
+                    color = Color(0xFFE5E7EB),
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    "dur:  ${durationMs.toString().padStart(6)} ms",
+                    color = Color(0xFFE5E7EB),
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    "vol:  $volTxt",
+                    color = Color(0xFFE5E7EB),
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "fps volume: ${volumeFps.fmt1()}",
+                    color = Color(0xFF22D3EE),
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    "fps frame:  ${frameFps.fmt1()}",
+                    color = Color(0xFF22D3EE),
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    "fps draw:   ${drawFps.fmt1()}",
+                    color = Color(0xFF22D3EE),
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+        }
         Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
