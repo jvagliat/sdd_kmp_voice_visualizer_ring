@@ -36,6 +36,26 @@ KMP Compose. Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJ
 
 ## Pending
 
+### T24 — Verificación audio wasmJs (HTMLAudioElement)
+
+**Implementado:** `WasmAudioRecorderPlayer` reemplaza el timer ficticio por un `HTMLAudioElement` real.
+- `external interface JsAudio : JsAny` + `js("new Audio(src)")` — sin dependencias nuevas.
+- El ticker lee `currentTime` / `duration` / `ended` del elemento JS cada ~16 ms.
+- La duración real se emite en `PlaybackProgress.duration`, el ViewModel la pica automáticamente.
+
+**Pendiente usuario:**
+- [ ] Compilar wasmJs y abrir en browser.
+- [ ] Presionar Play — debe sonar el audio WAV.
+- [ ] Verificar que el ring anima en sincronía con el audio.
+- [ ] Verificar que el playback para solo al terminar (no antes, no loop).
+- [ ] Verificar que Pause/Resume funcionan (pausa el audio y reanuda en la misma posición).
+
+**Posibles problemas:**
+- Si el browser bloquea autoplay sin interacción previa, `audio.play()` puede quedar pendiente — el ring no animará hasta que el usuario interactúe.
+- `audio.duration` es `NaN` los primeros ticks (metadata aún cargando) — ya manejado con `rawDur.isNaN()`.
+
+---
+
 ### T23 — Fix de build JS
 
 **Pendiente de detalle** — el usuario lo especificará en una sesión separada.
