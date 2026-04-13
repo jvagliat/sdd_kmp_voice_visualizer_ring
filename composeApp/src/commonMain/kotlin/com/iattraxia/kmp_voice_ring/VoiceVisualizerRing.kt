@@ -5,81 +5,68 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
 // =============================================================================
-//  VoiceVisualizerRing — API pública del componente. Dispatcher de versiones.
+//  VoiceVisualizerRing — componente audio-reactivo de anillo orgánico con glow.
 //
-//  Mantenemos múltiples implementaciones versionadas para preservar el
-//  aprendizaje de cada intento y poder comparar visualmente o retomar un
-//  approach descartado sin perder contexto:
+//  Dibuja un anillo de forma orgánica que responde al volumen de entrada:
+//  se expande con el audio y se contrae en silencio. El anillo está formado
+//  por 3 blobs Bézier desfasados que se superponen y generan un efecto de
+//  "shimmer" fluido. El glow se implementa con dos halos blureados (Cloudy)
+//  apilados detrás del contorno nítido.
 //
-//   - VoiceVisualizerRingV1 — stacks rellenos.
-//       Descartado: onion ring (rodajas concéntricas en lugar de anillo hueco).
+//  Parámetros:
 //
-//   - VoiceVisualizerRingV2 — stacks recortados con clipPath.
-//       Descartado: 11 bandas duras visibles + "escalón" en el contorno por
-//       radii overflowing sin normalización CSS.
+//  volume          Nivel de volumen normalizado [0.0, 1.0]. Típicamente el RMS
+//                  del frame de audio en curso. Controla la escala del ring
+//                  y la intensidad del glow.
 //
-//   - VoiceVisualizerRingV3 — radii CSS-normalizados + Modifier.blur,
-//       blobs FILLED en los halos.
-//       Descartado: el centro del ring queda lleno (los fills blureados
-//       preservan masa central). Tampoco se ven los 3 phase offsets porque
-//       sólo blob[0] aparece nítido.
+//  color           Color base del ring y del glow. Se aplica con distintos
+//                  valores de alpha en cada capa (halo lejano, cercano, nítido).
 //
-//   - VoiceVisualizerRingV4 — mismo blur + radii normalizados, pero los
-//       blobs van como STROKE en todos los canvases y los 3 phase offsets se
-//       dibujan también en el ring nítido.
-//       Problema en Android: Modifier.blur crea un RenderEffect (hardware
-//       layer) que cachea el contenido. Los state reads del draw block no
-//       invalidan ese layer → los halos blureados quedan congelados. Solo se
-//       actualizan cuando cambia el radio del blur (parámetro del modifier).
-//       Intentos de fix fallidos (ver historial de commits):
-//         1. Mover state reads al cuerpo del composable (fuera del draw block):
-//            el draw block quedó sin reads propios → nunca se re-ejecuta solo.
-//         2. Leer estado en el cuerpo Y en el draw block: fuerza recomposición
-//            60 fps del composable entero → 1000+ frames skipped, app
-//            inutilizable.
-//       Conclusión: Modifier.blur no es viable para contenido que anima 60 fps
-//       en Android. Solución definitiva en V5.
+//  intensity       Multiplicador de la respuesta a `volume`. Con 1.0 (default)
+//                  el ring usa su rango completo de escala y brillo. Valores
+//                  menores reducen la sensibilidad; mayores la amplifican.
 //
-//   - VoiceVisualizerRingV5 — reemplaza Modifier.blur con fake-blur via
-//       multi-pass strokes dentro de un Canvas único.
-//       Approach: cada blob se dibuja N veces con stroke width decreciente
-//       (más ancho primero) y alpha creciente → falloff gaussiano aproximado.
-//       Sin hardware layers → sin caching → anima correctamente en todos los
-//       targets (Android, iOS, JVM Desktop, wasmJs).
-//       Grupos de pasadas: far halo (4p), near halo (3p), sharp ring (1p).
-//       24 drawPath calls en full mode, 12 en lowPerformanceMode.
-//       Alternativas descartadas para Android:
-//         A. drawIntoCanvas + BlurMaskFilter: funciona en Desktop (Skia puro),
-//            silenciosamente ignorado en Android hardware canvas para drawPath.
-//         B. graphicsLayer { renderEffect = BlurEffect(...) } (API 31+):
-//            misma raíz que Modifier.blur → mismo problema de caching.
-//            Además requiere expect/actual para Desktop.
-//         C. Render a offscreen bitmap + blur bitmap + drawBitmap: correcto
-//            pero requiere allocar bitmap(s) por frame y blur software;
-//            overkill para este efecto.
+//  thickness       Grosor base del trazo del ring en dp (default 5). Los halos
+//                  blureados usan múltiplos de este valor (×1.6 y ×2.5).
 //
-//   - VoiceVisualizerRingV6Gml51Cloudy — V4 con Cloudy en lugar de Modifier.blur.
-//       Usa key(blurTick) para forzar recreación de los canvases blureados a
-//       ~15fps. Ring nítido actualiza a 60fps completos.
+//  glowSpread      Multiplicador sobre los radios de blur de Cloudy. 1.0 =
+//                  radios por defecto; valores mayores amplían el halo sin
+//                  cambiar el trazo nítido.
 //
-//   - VoiceVisualizerRingV8 — V6 con smoothing de picos y brillo dinámico (T21+T22).
-//       T21: filtro paso-bajo en dos etapas (preSmoothed + lerp visual) →
-//            movimiento líquido y orgánico en apertura y cierre.
-//       T22: floor de targetBright bajado a 0.05f → glow respira con el volumen,
-//            se desvanece casi por completo en silencio.
+//  blurRadius      Radio base del halo cercano en dp (default 15). El halo
+//                  lejano escala a blurRadius×2.5. En lowPerformanceMode el
+//                  halo lejano se omite y el cercano usa blurRadius×1.5.
 //
-//   - VoiceVisualizerRingV9 — V8 con inputSmoothing y responsiveness como parámetros (T26).
-//       Expone las constantes de Stage 1 (decay) y Stage 2 (lerp) para ajuste en caliente.
+//  relativeMotion  false (default): los 3 blobs comparten el mismo ciclo de
+//                  8 segundos con phase offsets fijos (0%, 31.25%, 62.5%).
+//                  true: cada blob usa un ciclo ligeramente distinto (8000 /
+//                  8720 / 9440 ms) → el desfasaje entre blobs varía en el
+//                  tiempo, creando movimiento relativo real entre los anillos.
 //
-//   Experimentos archivados en experiments/:
-//   - VoiceVisualizerRingV7 — keyframes circulares con protuberancia localizada.
-//       Descartado como rama principal; V6 es la base canónica.
+//  layerFalloff    Cuánto se atenúa el brillo en cada capa respecto a la
+//                  anterior. 0.0 = todas las capas con igual brillo. 0.2
+//                  (default) = cada capa pierde un 20% de brillo adicional.
+//                  La capa 0 (frente) siempre tiene el brillo máximo.
 //
-//  Cada Vx arranca con un header propio documentando hipótesis, approach,
-//  drawPath count, problemas descubiertos y siguiente paso.
+//  inputSmoothing  Decay del filtro paso-bajo que suaviza el volumen crudo
+//                  antes de aplicarlo (default 0.85). Rango útil: 0.0–0.95.
+//                  0.0 = sin suavizado (señal cruda, picos bruscos).
+//                  0.95 = muy inerte (responde lento a cambios de volumen).
 //
-//  Para comparar versiones cambiá la línea de despacho de abajo. Las firmas
-//  son idénticas → swap puro.
+//  responsiveness  Factor de lerp visual que mueve el ring hacia su target
+//                  en cada frame (default 0.15). Rango útil: 0.01–1.0.
+//                  0.01 = movimiento muy suave y orgánico.
+//                  1.0 = snap instantáneo al target.
+//
+//  lowPerformanceMode
+//                  true: omite el halo lejano para reducir la carga GPU en
+//                  dispositivos con limitaciones. false (default): renderiza
+//                  los 3 canvases (far halo + near halo + sharp ring).
+//
+//  modifier        Modifier estándar de Compose. El componente ocupa todo el
+//                  espacio disponible dentro del modifier aplicado.
+//
+//  Historia de implementaciones: docs/bitacora_estrategias.md
 // =============================================================================
 
 @Composable
