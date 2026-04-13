@@ -79,6 +79,7 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
     intensity: Float = 1f,
     thickness: Float = 5f,
     glowSpread: Float = 1f,
+    blurRadius: Float = 15f,
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -141,7 +142,7 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
         // === Halo lejano: stroke ancho + blur amplio via Cloudy ===
         // key(tick) destruye y recrea el composable entero → Cloudy captura de nuevo
         if (!lowPerformanceMode) {
-            val farRadius = with(density) { (40f * glowSpread).dp.roundToPx() }
+            val farRadius = with(density) { (blurRadius * 2.5f * glowSpread).dp.roundToPx() }
             key(tick) {
                 BlobsCanvasStrokedCloudy(
                     modifier = Modifier
@@ -161,7 +162,7 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
 
         // === Halo cercano: stroke moderado + blur moderado via Cloudy ===
         val nearRadius = with(density) {
-            ((if (lowPerformanceMode) 22f else 15f) * glowSpread).dp.roundToPx()
+            ((if (lowPerformanceMode) blurRadius * 1.5f else blurRadius) * glowSpread).dp.roundToPx()
         }
         key(tick) {
             BlobsCanvasStrokedCloudy(
