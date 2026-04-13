@@ -51,6 +51,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kmp.audio.recorder.player)
+            implementation(libs.compose.cloudy)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -75,7 +75,7 @@ fun VoiceVisualizerRing(
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    VoiceVisualizerRingV5(
+    VoiceVisualizerRingV6Gml51Cloudy(
         volume = volume,
         color = color,
         intensity = intensity,
