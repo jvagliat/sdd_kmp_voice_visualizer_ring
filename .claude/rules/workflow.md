@@ -9,9 +9,12 @@
 - Use `git status` and recent commits to understand current state when unsure.
 
 ## Task Management
-- Use TodoWrite to track multi-step tasks during the session.
-- Mark each task complete immediately after finishing, not in batches.
-- If a task generates subtasks, add them to the todo list.
+- `TASKS.md` es la fuente de verdad del estado activo (In Progress, Pending, Blockers, Estado vivo).
+  Al retomar trabajo: leer `TASKS.md` y el último commit. No pedir re-explicación al usuario.
+- `DONE.md` contiene el historial de tareas completadas. No leerlo en el flujo normal — solo para arqueología.
+- Al completar una task: moverla a `DONE.md` con su commit hash. Borrarla de `TASKS.md`. No acumular tareas completadas.
+- Usar TodoWrite para trackear progreso dentro de la sesión activa.
+- Marcar cada tarea completa inmediatamente al terminar, no en batch.
 
 ## Code Changes
 - One concern at a time. Do not refactor unrelated code.
