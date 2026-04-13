@@ -284,7 +284,7 @@ private fun DesktopLayout(
 
         Box(
             modifier = Modifier
-                .align(Alignment.TopEnd)
+                .align(Alignment.TopStart)
                 .padding(16.dp),
         ) {
             DebugPanel(
@@ -302,7 +302,7 @@ private fun DesktopLayout(
 
         Box(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
+                .align(Alignment.TopEnd)
                 .padding(16.dp),
         ) {
             DebugEffectsPanel(
