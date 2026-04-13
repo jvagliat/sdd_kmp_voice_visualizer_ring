@@ -98,6 +98,7 @@ fun VoiceVisualizerRingV7(
     glowSpread: Float = 1f,
     blurRadius: Float = 15f,
     relativeMotion: Boolean = false,
+    layerFalloff: Float = 0.2f,
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -159,6 +160,7 @@ fun VoiceVisualizerRingV7(
                     currentBright = currentBright,
                     elapsedMs = elapsedMs,
                     relativeMotion = relativeMotion,
+                    layerFalloff = layerFalloff,
                 )
             }
         }
@@ -179,6 +181,7 @@ fun VoiceVisualizerRingV7(
                 currentBright = currentBright,
                 elapsedMs = elapsedMs,
                 relativeMotion = relativeMotion,
+                layerFalloff = layerFalloff,
             )
         }
 
@@ -193,6 +196,7 @@ fun VoiceVisualizerRingV7(
             currentBright = currentBright,
             elapsedMs = elapsedMs,
             relativeMotion = relativeMotion,
+            layerFalloff = layerFalloff,
         )
     }
 }
@@ -209,6 +213,7 @@ private fun BlobsCanvasV7(
     currentBright: MutableFloatState,
     elapsedMs: MutableLongState,
     relativeMotion: Boolean,
+    layerFalloff: Float,
 ) {
     @Suppress("UNUSED_EXPRESSION")
     elapsedMs.longValue
@@ -239,7 +244,7 @@ private fun BlobsCanvasV7(
                     progress = layerProgress,
                     base = base,
                 )
-                val layerBright = (b * (1f - layer * 0.2f)).coerceIn(0f, 1f)
+                val layerBright = (b * (1f - layer * layerFalloff)).coerceIn(0f, 1f)
                 val pathColor = color.copy(alpha = alphaMul * layerBright)
 
                 translate(left = dx, top = dy) {

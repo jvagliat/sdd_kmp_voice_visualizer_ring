@@ -72,6 +72,9 @@ fun VoiceVisualizerRing(
     intensity: Float = 1f,
     thickness: Float = 5f,
     glowSpread: Float = 1f,
+    blurRadius: Float = 15f,
+    relativeMotion: Boolean = false,
+    layerFalloff: Float = 0.2f,
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -81,6 +84,9 @@ fun VoiceVisualizerRing(
         intensity = intensity,
         thickness = thickness,
         glowSpread = glowSpread,
+        blurRadius = blurRadius,
+        relativeMotion = relativeMotion,
+        layerFalloff = layerFalloff,
         lowPerformanceMode = lowPerformanceMode,
         modifier = modifier,
     )

@@ -98,6 +98,9 @@ fun App() {
         var intensity by remember { mutableStateOf(1f) }
         var thickness by remember { mutableStateOf(5f) }
         var glowSpread by remember { mutableStateOf(1f) }
+        var blurRadius by remember { mutableStateOf(15f) }
+        var relativeMotion by remember { mutableStateOf(false) }
+        var layerFalloff by remember { mutableStateOf(0.2f) }
 
         var assetIndex by remember { mutableStateOf(0) }
         var useBandEnergy by remember { mutableStateOf(DEFAULT_USE_BAND_ENERGY) }
@@ -135,6 +138,12 @@ fun App() {
                     onThicknessChange = { thickness = it },
                     glowSpread = glowSpread,
                     onGlowSpreadChange = { glowSpread = it },
+                    blurRadius = blurRadius,
+                    onBlurRadiusChange = { blurRadius = it },
+                    relativeMotion = relativeMotion,
+                    onRelativeMotionChange = { relativeMotion = it },
+                    layerFalloff = layerFalloff,
+                    onLayerFalloffChange = { layerFalloff = it },
                     assetPaths = ASSET_PATHS,
                     assetIndex = assetIndex,
                     onAssetIndexChange = { assetIndex = it },
@@ -162,6 +171,12 @@ fun App() {
                     onThicknessChange = { thickness = it },
                     glowSpread = glowSpread,
                     onGlowSpreadChange = { glowSpread = it },
+                    blurRadius = blurRadius,
+                    onBlurRadiusChange = { blurRadius = it },
+                    relativeMotion = relativeMotion,
+                    onRelativeMotionChange = { relativeMotion = it },
+                    layerFalloff = layerFalloff,
+                    onLayerFalloffChange = { layerFalloff = it },
                     assetPaths = ASSET_PATHS,
                     assetIndex = assetIndex,
                     onAssetIndexChange = { assetIndex = it },
@@ -195,6 +210,12 @@ private fun DesktopLayout(
     onThicknessChange: (Float) -> Unit,
     glowSpread: Float,
     onGlowSpreadChange: (Float) -> Unit,
+    blurRadius: Float,
+    onBlurRadiusChange: (Float) -> Unit,
+    relativeMotion: Boolean,
+    onRelativeMotionChange: (Boolean) -> Unit,
+    layerFalloff: Float,
+    onLayerFalloffChange: (Float) -> Unit,
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
@@ -225,6 +246,9 @@ private fun DesktopLayout(
                     intensity = intensity,
                     thickness = thickness,
                     glowSpread = glowSpread,
+                    blurRadius = blurRadius,
+                    relativeMotion = relativeMotion,
+                    layerFalloff = layerFalloff,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -288,6 +312,12 @@ private fun DesktopLayout(
                 onThicknessChange = onThicknessChange,
                 glowSpread = glowSpread,
                 onGlowSpreadChange = onGlowSpreadChange,
+                blurRadius = blurRadius,
+                onBlurRadiusChange = onBlurRadiusChange,
+                relativeMotion = relativeMotion,
+                onRelativeMotionChange = onRelativeMotionChange,
+                layerFalloff = layerFalloff,
+                onLayerFalloffChange = onLayerFalloffChange,
                 colorPresets = colorPresets,
                 colorIndex = colorIndex,
                 onColorIndexChange = onColorIndexChange,
@@ -353,6 +383,12 @@ private fun MobileLayout(
     onThicknessChange: (Float) -> Unit,
     glowSpread: Float,
     onGlowSpreadChange: (Float) -> Unit,
+    blurRadius: Float,
+    onBlurRadiusChange: (Float) -> Unit,
+    relativeMotion: Boolean,
+    onRelativeMotionChange: (Boolean) -> Unit,
+    layerFalloff: Float,
+    onLayerFalloffChange: (Float) -> Unit,
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
@@ -387,6 +423,8 @@ private fun MobileLayout(
                 intensity = intensity,
                 thickness = thickness,
                 glowSpread = glowSpread,
+                blurRadius = blurRadius,
+                relativeMotion = relativeMotion,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -395,21 +433,19 @@ private fun MobileLayout(
 
         val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
 
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(1.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text("pos: ${positionMs.toString().padStart(6)} ms", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+                Text("vol: $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
                 Text("dur: ${durationMs.toString().padStart(6)} ms", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("vol: $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
-                Text("fps vol: ${volumeFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp), horizontalAlignment = Alignment.End) {
+                Text("fps vol:   ${volumeFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
                 Text("fps frame: ${frameFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
-                Text("fps draw: ${drawFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
+                Text("fps draw:  ${drawFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
             }
         }
 
@@ -525,6 +561,32 @@ private fun MobileLayout(
                 EffectSlider("thickness", thickness, 0f..30f, onThicknessChange, accentColor)
                 Spacer(Modifier.height(6.dp))
                 EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("blurRadius", blurRadius, 2f..60f, onBlurRadiusChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("layerFalloff", layerFalloff, 0f..1.0f, onLayerFalloffChange, accentColor)
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "relativeMotion",
+                        color = Color(0xFFE5E7EB),
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = relativeMotion,
+                        onCheckedChange = onRelativeMotionChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = accentColor,
+                            checkedTrackColor = accentColor.copy(alpha = 0.33f),
+                            uncheckedThumbColor = Color(0xFFE5E7EB),
+                            uncheckedTrackColor = Color(0x331F2937),
+                        ),
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
             }
         }
@@ -653,6 +715,12 @@ private fun DebugEffectsPanel(
     onThicknessChange: (Float) -> Unit,
     glowSpread: Float,
     onGlowSpreadChange: (Float) -> Unit,
+    blurRadius: Float,
+    onBlurRadiusChange: (Float) -> Unit,
+    relativeMotion: Boolean,
+    onRelativeMotionChange: (Boolean) -> Unit,
+    layerFalloff: Float,
+    onLayerFalloffChange: (Float) -> Unit,
     colorPresets: List<RingColorPreset>,
     colorIndex: Int,
     onColorIndexChange: (Int) -> Unit,
@@ -667,6 +735,32 @@ private fun DebugEffectsPanel(
         EffectSlider("thickness", thickness, 0f..30f, onThicknessChange, accentColor)
         Spacer(Modifier.height(6.dp))
         EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange, accentColor)
+        Spacer(Modifier.height(6.dp))
+        EffectSlider("blurRadius", blurRadius, 2f..60f, onBlurRadiusChange, accentColor)
+        Spacer(Modifier.height(6.dp))
+        EffectSlider("layerFalloff", layerFalloff, 0f..1.0f, onLayerFalloffChange, accentColor)
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "relativeMotion",
+                color = Color(0xFFE5E7EB),
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = relativeMotion,
+                onCheckedChange = onRelativeMotionChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = accentColor,
+                    checkedTrackColor = accentColor.copy(alpha = 0.33f),
+                    uncheckedThumbColor = Color(0xFFE5E7EB),
+                    uncheckedTrackColor = Color(0x331F2937),
+                ),
+            )
+        }
         Spacer(Modifier.height(12.dp))
         ColorChipRow(
             presets = colorPresets,

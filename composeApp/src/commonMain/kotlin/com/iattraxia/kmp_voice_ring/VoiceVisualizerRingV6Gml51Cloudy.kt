@@ -72,6 +72,12 @@ private const val SILENCE_EPSILON = 0.005f
 
 private const val BLUR_UPDATE_INTERVAL_MS = 66L
 
+private val CYCLE_DURATIONS = longArrayOf(
+    CYCLE_MS,
+    (CYCLE_MS * 1.09).toLong(),
+    (CYCLE_MS * 1.18).toLong(),
+)
+
 @Composable
 fun VoiceVisualizerRingV6Gml51Cloudy(
     volume: Float,
@@ -80,6 +86,8 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
     thickness: Float = 5f,
     glowSpread: Float = 1f,
     blurRadius: Float = 15f,
+    relativeMotion: Boolean = false,
+    layerFalloff: Float = 0.2f,
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -156,6 +164,8 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
                     currentScale = currentScale,
                     currentBright = currentBright,
                     elapsedMs = elapsedMs,
+                    relativeMotion = relativeMotion,
+                    layerFalloff = layerFalloff,
                 )
             }
         }
@@ -177,6 +187,8 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
                 currentScale = currentScale,
                 currentBright = currentBright,
                 elapsedMs = elapsedMs,
+                relativeMotion = relativeMotion,
+                layerFalloff = layerFalloff,
             )
         }
 
@@ -192,6 +204,8 @@ fun VoiceVisualizerRingV6Gml51Cloudy(
             currentScale = currentScale,
             currentBright = currentBright,
             elapsedMs = elapsedMs,
+            relativeMotion = relativeMotion,
+            layerFalloff = layerFalloff,
         )
     }
 }
@@ -207,6 +221,8 @@ private fun BlobsCanvasStrokedCloudy(
     currentScale: MutableFloatState,
     currentBright: MutableFloatState,
     elapsedMs: MutableLongState,
+    relativeMotion: Boolean,
+    layerFalloff: Float,
 ) {
     @Suppress("UNUSED_EXPRESSION")
     elapsedMs.longValue
@@ -227,7 +243,8 @@ private fun BlobsCanvasStrokedCloudy(
 
         scale(scaleX = s, scaleY = s, pivot = Offset(cx, cy)) {
             for (layer in (LAYER_COUNT - 1) downTo 0) {
-                val rawProgress = (ms % CYCLE_MS).toFloat() / CYCLE_MS.toFloat()
+                val cycleMs = if (relativeMotion) CYCLE_DURATIONS[layer] else CYCLE_MS
+                val rawProgress = (ms % cycleMs).toFloat() / cycleMs.toFloat()
                 val layerProgress = (rawProgress + PHASE_OFFSETS[layer]) % 1f
                 val rotation = buildBlobFrameV6(
                     path = paths[layer],
@@ -235,7 +252,7 @@ private fun BlobsCanvasStrokedCloudy(
                     progress = layerProgress,
                     base = base,
                 )
-                val layerBright = (b * (1f - layer * 0.2f)).coerceIn(0f, 1f)
+                val layerBright = (b * (1f - layer * layerFalloff)).coerceIn(0f, 1f)
                 val pathColor = color.copy(alpha = alphaMul * layerBright)
 
                 translate(left = dx, top = dy) {
