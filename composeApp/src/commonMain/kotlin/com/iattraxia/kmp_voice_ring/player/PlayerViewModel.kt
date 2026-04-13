@@ -74,7 +74,7 @@ class PlayerViewModel(
     }
 
     @OptIn(ExperimentalResourceApi::class)
-    suspend fun load(assetRelativePath: String, useBandEnergy: Boolean = false) {
+    suspend fun load(assetRelativePath: String, filterVoiceFrequencies: Boolean = false) {
         if (_state.value == PlayerState.Playing || _state.value == PlayerState.Paused) {
             player.stopPlaying()
         }
@@ -83,7 +83,7 @@ class PlayerViewModel(
         _state.value = PlayerState.Loading
         try {
             val bytes = Res.readBytes(assetRelativePath)
-            val track = if (useBandEnergy) parseWavBandEnergies(bytes) else parseWavAmplitudes(bytes)
+            val track = if (filterVoiceFrequencies) parseWavBandEnergies(bytes) else parseWavAmplitudes(bytes)
             amplitudes = track
             _durationMs.value = track.totalDurationMs
 

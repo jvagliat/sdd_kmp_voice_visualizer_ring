@@ -38,6 +38,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -64,7 +65,7 @@ private val ASSET_PATHS = listOf(
     "files/audio/demo_voice_prototype.wav",
     "files/audio/Jan_Morgenstern_-_01_-_Prelude.wav",
 )
-private const val DEFAULT_USE_BAND_ENERGY = true
+private const val DEFAULT_FILTER_VOICE_FREQUENCIES = true
 
 data class RingColorPreset(val label: String, val color: Color)
 
@@ -103,11 +104,11 @@ fun App() {
         var layerFalloff by remember { mutableStateOf(0.2f) }
 
         var assetIndex by remember { mutableStateOf(0) }
-        var useBandEnergy by remember { mutableStateOf(DEFAULT_USE_BAND_ENERGY) }
+        var filterVoiceFrequencies by remember { mutableStateOf(DEFAULT_FILTER_VOICE_FREQUENCIES) }
         var colorIndex by remember { mutableStateOf(DEFAULT_COLOR_INDEX) }
 
-        LaunchedEffect(assetIndex, useBandEnergy) {
-            viewModel.load(ASSET_PATHS[assetIndex], useBandEnergy = useBandEnergy)
+        LaunchedEffect(assetIndex, filterVoiceFrequencies) {
+            viewModel.load(ASSET_PATHS[assetIndex], filterVoiceFrequencies = filterVoiceFrequencies)
         }
         LaunchedEffect(Unit) {
             while (true) withFrameMillis { frameFpsMeter.tick() }
@@ -147,8 +148,8 @@ fun App() {
                     assetPaths = ASSET_PATHS,
                     assetIndex = assetIndex,
                     onAssetIndexChange = { assetIndex = it },
-                    useBandEnergy = useBandEnergy,
-                    onUseBandEnergyChange = { useBandEnergy = it },
+                    filterVoiceFrequencies = filterVoiceFrequencies,
+                    onFilterVoiceFrequenciesChange = { filterVoiceFrequencies = it },
                     colorPresets = COLOR_PRESETS,
                     colorIndex = colorIndex,
                     onColorIndexChange = { colorIndex = it },
@@ -180,8 +181,8 @@ fun App() {
                     assetPaths = ASSET_PATHS,
                     assetIndex = assetIndex,
                     onAssetIndexChange = { assetIndex = it },
-                    useBandEnergy = useBandEnergy,
-                    onUseBandEnergyChange = { useBandEnergy = it },
+                    filterVoiceFrequencies = filterVoiceFrequencies,
+                    onFilterVoiceFrequenciesChange = { filterVoiceFrequencies = it },
                     colorPresets = COLOR_PRESETS,
                     colorIndex = colorIndex,
                     onColorIndexChange = { colorIndex = it },
@@ -219,8 +220,8 @@ private fun DesktopLayout(
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
-    useBandEnergy: Boolean,
-    onUseBandEnergyChange: (Boolean) -> Unit,
+    filterVoiceFrequencies: Boolean,
+    onFilterVoiceFrequenciesChange: (Boolean) -> Unit,
     colorPresets: List<RingColorPreset>,
     colorIndex: Int,
     onColorIndexChange: (Int) -> Unit,
@@ -229,6 +230,8 @@ private fun DesktopLayout(
 ) {
     val accentColor = colorPresets[colorIndex].color
     var showSourceSheet by remember { mutableStateOf(false) }
+    var showColorSheet by remember { mutableStateOf(false) }
+    var showEffectsSheet by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -279,6 +282,12 @@ private fun DesktopLayout(
                 ) {
                     Text("Stop", color = accentColor)
                 }
+                IconButton(onClick = { showColorSheet = true }) {
+                    Icon(Icons.Filled.Palette, contentDescription = "Color", tint = accentColor)
+                }
+                IconButton(onClick = { showEffectsSheet = true }) {
+                    Icon(Icons.Filled.Tune, contentDescription = "Effects", tint = accentColor)
+                }
             }
         }
 
@@ -299,36 +308,12 @@ private fun DesktopLayout(
                 accentColor = accentColor,
             )
         }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp),
-        ) {
-            DebugEffectsPanel(
-                intensity = intensity,
-                onIntensityChange = onIntensityChange,
-                thickness = thickness,
-                onThicknessChange = onThicknessChange,
-                glowSpread = glowSpread,
-                onGlowSpreadChange = onGlowSpreadChange,
-                blurRadius = blurRadius,
-                onBlurRadiusChange = onBlurRadiusChange,
-                relativeMotion = relativeMotion,
-                onRelativeMotionChange = onRelativeMotionChange,
-                layerFalloff = layerFalloff,
-                onLayerFalloffChange = onLayerFalloffChange,
-                colorPresets = colorPresets,
-                colorIndex = colorIndex,
-                onColorIndexChange = onColorIndexChange,
-                accentColor = accentColor,
-            )
-        }
     }
 
     if (showSourceSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSourceSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = Color(0xFF1A1F2E),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -344,14 +329,76 @@ private fun DesktopLayout(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "band-energy",
+                        "filterVoiceFrequencies",
                         color = Color(0xFFE5E7EB),
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f),
                     )
                     Switch(
-                        checked = useBandEnergy,
-                        onCheckedChange = onUseBandEnergyChange,
+                        checked = filterVoiceFrequencies,
+                        onCheckedChange = onFilterVoiceFrequenciesChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = accentColor,
+                            checkedTrackColor = accentColor.copy(alpha = 0.33f),
+                            uncheckedThumbColor = Color(0xFFE5E7EB),
+                            uncheckedTrackColor = Color(0x331F2937),
+                        ),
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+
+    if (showColorSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showColorSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF1A1F2E),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("color", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+                Spacer(Modifier.height(16.dp))
+                ColorChipRow(
+                    presets = colorPresets,
+                    selectedIndex = colorIndex,
+                    onSelect = { onColorIndexChange(it); showColorSheet = false },
+                )
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+
+    if (showEffectsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showEffectsSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF1A1F2E),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EffectSlider("intensity", intensity, 0f..3f, onIntensityChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("thickness", thickness, 0f..30f, onThicknessChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("blurRadius", blurRadius, 2f..60f, onBlurRadiusChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("layerFalloff", layerFalloff, 0f..1.0f, onLayerFalloffChange, accentColor)
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "relativeMotion",
+                        color = Color(0xFFE5E7EB),
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = relativeMotion,
+                        onCheckedChange = onRelativeMotionChange,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = accentColor,
                             checkedTrackColor = accentColor.copy(alpha = 0.33f),
@@ -392,8 +439,8 @@ private fun MobileLayout(
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
-    useBandEnergy: Boolean,
-    onUseBandEnergyChange: (Boolean) -> Unit,
+    filterVoiceFrequencies: Boolean,
+    onFilterVoiceFrequenciesChange: (Boolean) -> Unit,
     colorPresets: List<RingColorPreset>,
     colorIndex: Int,
     onColorIndexChange: (Int) -> Unit,
@@ -496,6 +543,7 @@ private fun MobileLayout(
     if (showSourceSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSourceSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = Color(0xFF1A1F2E),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -511,14 +559,14 @@ private fun MobileLayout(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "band-energy",
+                        "filterVoiceFrequencies",
                         color = Color(0xFFE5E7EB),
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f),
                     )
                     Switch(
-                        checked = useBandEnergy,
-                        onCheckedChange = onUseBandEnergyChange,
+                        checked = filterVoiceFrequencies,
+                        onCheckedChange = onFilterVoiceFrequenciesChange,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = accentColor,
                             checkedTrackColor = accentColor.copy(alpha = 0.33f),
@@ -535,6 +583,7 @@ private fun MobileLayout(
     if (showColorSheet) {
         ModalBottomSheet(
             onDismissRequest = { showColorSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = Color(0xFF1A1F2E),
         ) {
             Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
@@ -553,6 +602,7 @@ private fun MobileLayout(
     if (showSettingsSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSettingsSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = Color(0xFF1A1F2E),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -704,69 +754,6 @@ private fun AssetSelector(
             }
             Spacer(Modifier.height(4.dp))
         }
-    }
-}
-
-@Composable
-private fun DebugEffectsPanel(
-    intensity: Float,
-    onIntensityChange: (Float) -> Unit,
-    thickness: Float,
-    onThicknessChange: (Float) -> Unit,
-    glowSpread: Float,
-    onGlowSpreadChange: (Float) -> Unit,
-    blurRadius: Float,
-    onBlurRadiusChange: (Float) -> Unit,
-    relativeMotion: Boolean,
-    onRelativeMotionChange: (Boolean) -> Unit,
-    layerFalloff: Float,
-    onLayerFalloffChange: (Float) -> Unit,
-    colorPresets: List<RingColorPreset>,
-    colorIndex: Int,
-    onColorIndexChange: (Int) -> Unit,
-    accentColor: Color,
-) {
-    Column(
-        modifier = Modifier.width(260.dp),
-        horizontalAlignment = Alignment.Start,
-    ) {
-        EffectSlider("intensity", intensity, 0f..3f, onIntensityChange, accentColor)
-        Spacer(Modifier.height(6.dp))
-        EffectSlider("thickness", thickness, 0f..30f, onThicknessChange, accentColor)
-        Spacer(Modifier.height(6.dp))
-        EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange, accentColor)
-        Spacer(Modifier.height(6.dp))
-        EffectSlider("blurRadius", blurRadius, 2f..60f, onBlurRadiusChange, accentColor)
-        Spacer(Modifier.height(6.dp))
-        EffectSlider("layerFalloff", layerFalloff, 0f..1.0f, onLayerFalloffChange, accentColor)
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "relativeMotion",
-                color = Color(0xFFE5E7EB),
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.weight(1f),
-            )
-            Switch(
-                checked = relativeMotion,
-                onCheckedChange = onRelativeMotionChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = accentColor,
-                    checkedTrackColor = accentColor.copy(alpha = 0.33f),
-                    uncheckedThumbColor = Color(0xFFE5E7EB),
-                    uncheckedTrackColor = Color(0x331F2937),
-                ),
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        ColorChipRow(
-            presets = colorPresets,
-            selectedIndex = colorIndex,
-            onSelect = onColorIndexChange,
-        )
     }
 }
 
