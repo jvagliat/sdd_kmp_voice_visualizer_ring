@@ -36,6 +36,24 @@ KMP Compose. Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJ
 
 ## Pending
 
+### T23 — Fix de build JS
+
+**Pendiente de detalle** — el usuario lo especificará en una sesión separada.
+
+---
+
+### T21+T22 — Verificación visual V8 (smoothing + brillo dinámico)
+
+**Implementado en V8** (`VoiceVisualizerRingV8.kt`) — dispatcher apunta a V8.
+
+**Pendiente usuario:**
+- [ ] Compilar y verificar que los picos ya no se ven "nerviosos" (movimiento líquido).
+- [ ] Verificar que el glow baja en silencio y sube con el audio (respira).
+- [ ] Comparar comportamiento con `lowPerformanceMode = true` y `false`.
+- [ ] Confirmar sin regresión en Desktop (JVM) y wasmJs.
+
+---
+
 ### T20 — Verificación visual VoiceVisualizerRingV5
 
 **Implementado:** `VoiceVisualizerRingV5.kt` — Canvas único, multi-pass strokes sin `Modifier.blur`.
@@ -80,7 +98,8 @@ Depende de: stub `writeBytesToCache` en iosMain (o bypass directo desde commonMa
 
 ## Estado vivo
 - Pipeline completo verificado: JVM desktop (audio + ring animado) y Android (ring animado, layout mobile).
-- **V5 activo en dispatcher** (`VoiceVisualizerRing.kt` → `VoiceVisualizerRingV5`).
-- V5 reemplaza `Modifier.blur` con multi-pass strokes (Canvas único). Sin hardware layer → halos deben animar en Android.
-- **Pendiente:** T20 verificación visual (usuario compila), T18d (mobile), T14e/T16c (audio).
+- **V8 activo en dispatcher** (`VoiceVisualizerRing.kt` → `VoiceVisualizerRingV8`).
+- V8 = V6Gml51Cloudy + T21 (filtro paso-bajo 2 etapas) + T22 (glow dinámico, floor 0.05f).
+- V7 movido a `experiments/` — experimento de keyframes circulares, no era la rama principal.
+- **Pendiente:** T21+T22 verificación visual (usuario compila), T20, T18d (mobile), T14e/T16c (audio).
 - `Greeting.kt` sin referencias — opcional borrar.
