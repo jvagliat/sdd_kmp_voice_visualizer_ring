@@ -26,7 +26,37 @@ import androidx.compose.ui.graphics.Color
 //
 //   - VoiceVisualizerRingV4 — mismo blur + radii normalizados, pero los
 //       blobs van como STROKE en todos los canvases y los 3 phase offsets se
-//       dibujan también en el ring nítido. Activo.
+//       dibujan también en el ring nítido.
+//       Problema en Android: Modifier.blur crea un RenderEffect (hardware
+//       layer) que cachea el contenido. Los state reads del draw block no
+//       invalidan ese layer → los halos blureados quedan congelados. Solo se
+//       actualizan cuando cambia el radio del blur (parámetro del modifier).
+//       Intentos de fix fallidos (ver historial de commits):
+//         1. Mover state reads al cuerpo del composable (fuera del draw block):
+//            el draw block quedó sin reads propios → nunca se re-ejecuta solo.
+//         2. Leer estado en el cuerpo Y en el draw block: fuerza recomposición
+//            60 fps del composable entero → 1000+ frames skipped, app
+//            inutilizable.
+//       Conclusión: Modifier.blur no es viable para contenido que anima 60 fps
+//       en Android. Solución definitiva en V5.
+//
+//   - VoiceVisualizerRingV5 — reemplaza Modifier.blur con fake-blur via
+//       multi-pass strokes dentro de un Canvas único.
+//       Approach: cada blob se dibuja N veces con stroke width decreciente
+//       (más ancho primero) y alpha creciente → falloff gaussiano aproximado.
+//       Sin hardware layers → sin caching → anima correctamente en todos los
+//       targets (Android, iOS, JVM Desktop, wasmJs).
+//       Grupos de pasadas: far halo (4p), near halo (3p), sharp ring (1p).
+//       24 drawPath calls en full mode, 12 en lowPerformanceMode.
+//       Alternativas descartadas para Android:
+//         A. drawIntoCanvas + BlurMaskFilter: funciona en Desktop (Skia puro),
+//            silenciosamente ignorado en Android hardware canvas para drawPath.
+//         B. graphicsLayer { renderEffect = BlurEffect(...) } (API 31+):
+//            misma raíz que Modifier.blur → mismo problema de caching.
+//            Además requiere expect/actual para Desktop.
+//         C. Render a offscreen bitmap + blur bitmap + drawBitmap: correcto
+//            pero requiere allocar bitmap(s) por frame y blur software;
+//            overkill para este efecto.
 //
 //  Cada Vx arranca con un header propio documentando hipótesis, approach,
 //  drawPath count, problemas descubiertos y siguiente paso.
@@ -45,7 +75,7 @@ fun VoiceVisualizerRing(
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    VoiceVisualizerRingV4(
+    VoiceVisualizerRingV5(
         volume = volume,
         color = color,
         intensity = intensity,
