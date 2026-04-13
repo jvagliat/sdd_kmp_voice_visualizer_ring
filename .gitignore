@@ -17,6 +17,7 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+kotlin-js-store/
 
 #
 .claude/settings.local.json
@@ -26,3 +27,9 @@ SPEC.md
 
 # Local scratch / experiment dir
 tmp/
+
+# Firebase
+.firebase/
+
+# Android release artifacts
+composeApp/release/
