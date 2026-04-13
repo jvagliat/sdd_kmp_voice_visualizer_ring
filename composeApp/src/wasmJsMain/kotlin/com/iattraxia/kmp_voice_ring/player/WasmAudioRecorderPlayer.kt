@@ -8,8 +8,6 @@ import io.github.hyochan.audio.PlaybackProgress
 import io.github.hyochan.audio.RecorderAudioSet
 import io.github.hyochan.audio.RecordingInfo
 import io.github.hyochan.audio.RecordingProgress
-import kotlin.js.JsAny
-import kotlin.js.JsFun
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,45 +15,50 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
+/**
+ * wasmJs audio player. Audio playback is not supported in the browser target;
+ * this implementation drives position via a monotonic timer so the ring
+ * animates correctly using the pre-computed WAV amplitude data.
+ */
 class WasmAudioRecorderPlayer : AudioRecorderPlayer {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var audioEl: JsAny? = null
     private var tickerJob: Job? = null
     private val listeners = mutableListOf<(PlaybackProgress) -> Unit>()
     private var properties = AudioRecorderPlayerProperties()
 
+    private var startMark: TimeMark? = null
+    private var pausedMs: Long = 0L
+
     override suspend fun startPlaying(source: AudioSource): Result<Unit> = runCatching {
-        val src = when (source) {
-            is AudioSource.File -> source.path
-            is AudioSource.Url -> throw UnsupportedOperationException("URL source not supported on wasmJs.")
-        }
         stopTicker()
-        audioEl?.let { jsPause(it) }
-        val a = jsNewAudio(src)
-        audioEl = a
-        jsPlay(a)
+        pausedMs = 0L
+        startMark = TimeSource.Monotonic.markNow()
         startTicker()
     }
 
     override suspend fun startPlaying(filePath: String?): Result<Unit> =
-        startPlaying(AudioSource.File(filePath ?: return Result.failure(IllegalArgumentException("filePath is null"))))
+        startPlaying(AudioSource.File(filePath ?: return Result.failure(IllegalArgumentException("null path"))))
 
     override suspend fun pausePlaying(): Result<Unit> = runCatching {
+        pausedMs = currentPositionMs()
+        startMark = null
         stopTicker()
-        audioEl?.let { jsPause(it) }
     }
 
     override suspend fun resumePlaying(): Result<Unit> = runCatching {
-        audioEl?.let { jsPlay(it) }
+        startMark = TimeSource.Monotonic.markNow()
         startTicker()
     }
 
     override suspend fun stopPlaying(): Result<Unit> = runCatching {
         stopTicker()
-        audioEl?.let { jsPause(it); jsRewind(it) }
-        emitProgress(0L, 0L)
+        startMark = null
+        pausedMs = 0L
+        emitProgress(0L)
     }
 
     override fun addPlaybackListener(listener: (PlaybackProgress) -> Unit) {
@@ -65,13 +68,14 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
     override fun removeListeners() {
         listeners.clear()
         stopTicker()
-        audioEl?.let { jsPause(it) }
-        audioEl = null
     }
 
     override fun setPlayerProperties(properties: AudioRecorderPlayerProperties) {
         this.properties = properties
     }
+
+    private fun currentPositionMs(): Long =
+        pausedMs + (startMark?.elapsedNow()?.inWholeMilliseconds ?: 0L)
 
     private fun startTicker() {
         tickerJob?.cancel()
@@ -79,10 +83,7 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
             val interval = properties.updateIntervalMs.coerceAtLeast(8L)
             while (isActive) {
                 delay(interval)
-                val a = audioEl ?: continue
-                val posMs = jsGetCurrentTimeMs(a).toLong()
-                val durMs = jsGetDurationMs(a).toLong()
-                emitProgress(posMs, durMs)
+                emitProgress(currentPositionMs())
             }
         }
     }
@@ -92,17 +93,17 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
         tickerJob = null
     }
 
-    private fun emitProgress(posMs: Long, durMs: Long) {
+    private fun emitProgress(posMs: Long) {
         val progress = PlaybackProgress(
             currentPosition = posMs,
-            duration = durMs,
+            duration = 0L, // ViewModel keeps track.totalDurationMs; end-detection via Stop
             formattedCurrentTime = posMs.fmtTime(),
-            formattedDuration = durMs.fmtTime(),
+            formattedDuration = "00:00.00",
         )
         for (l in listeners.toList()) l(progress)
     }
 
-    // Unsupported: recording
+    // Unsupported operations
     override suspend fun startRecording(filePath: String?) =
         Result.failure<String>(UnsupportedOperationException("Recording not supported on wasmJs."))
     override suspend fun pauseRecording() =
@@ -131,21 +132,3 @@ private fun Long.fmtTime(): String {
 }
 
 private fun Long.pad2(): String = toString().padStart(2, '0')
-
-@JsFun("(src) => new Audio(src)")
-private external fun jsNewAudio(src: String): JsAny
-
-@JsFun("(a) => { a.play().catch(e => console.warn('audio play:', e)); }")
-private external fun jsPlay(a: JsAny)
-
-@JsFun("(a) => a.pause()")
-private external fun jsPause(a: JsAny)
-
-@JsFun("(a) => { a.currentTime = 0; }")
-private external fun jsRewind(a: JsAny)
-
-@JsFun("(a) => (a.currentTime * 1000) | 0")
-private external fun jsGetCurrentTimeMs(a: JsAny): Int
-
-@JsFun("(a) => isFinite(a.duration) ? ((a.duration * 1000) | 0) : 0")
-private external fun jsGetDurationMs(a: JsAny): Int
