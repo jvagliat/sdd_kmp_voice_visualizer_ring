@@ -25,10 +25,13 @@ private external interface JsAudio : JsAny {
     fun pause()
 }
 
+// js() must be the sole expression in a top-level function body (Kotlin/Wasm constraint).
+private fun newAudioJs(src: String): JsAny? = js("new Audio(src)")
+
 /** Create an HTMLAudioElement with the given src (data: URL or http URL). */
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 private fun newAudio(src: String): JsAudio =
-    js("new Audio(src)").unsafeCast<JsAudio>()
+    newAudioJs(src).unsafeCast<JsAudio>()
 
 /**
  * wasmJs audio player backed by the browser's HTMLAudioElement.
