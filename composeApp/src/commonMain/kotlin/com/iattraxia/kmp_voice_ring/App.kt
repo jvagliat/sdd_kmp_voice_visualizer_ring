@@ -2,6 +2,8 @@ package com.iattraxia.kmp_voice_ring
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,19 +15,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -44,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -58,6 +64,17 @@ private val ASSET_PATHS = listOf(
     "files/audio/Jan_Morgenstern_-_01_-_Prelude.wav",
 )
 private const val DEFAULT_USE_BAND_ENERGY = true
+
+data class RingColorPreset(val label: String, val color: Color)
+
+private val COLOR_PRESETS = listOf(
+    RingColorPreset("Ámbar",   Color(0xFFFF9500)),
+    RingColorPreset("Cian",    Color(0xFF00FFFF)),
+    RingColorPreset("Menta",   Color(0xFF30D68A)),
+    RingColorPreset("Violeta", Color(0xFFBF5AF2)),
+    RingColorPreset("Hielo",   Color(0xFF5AC8FA)),
+)
+private const val DEFAULT_COLOR_INDEX = 1 // Cian
 
 @Composable
 fun App() {
@@ -83,6 +100,7 @@ fun App() {
 
         var assetIndex by remember { mutableStateOf(0) }
         var useBandEnergy by remember { mutableStateOf(DEFAULT_USE_BAND_ENERGY) }
+        var colorIndex by remember { mutableStateOf(DEFAULT_COLOR_INDEX) }
 
         LaunchedEffect(assetIndex, useBandEnergy) {
             viewModel.load(ASSET_PATHS[assetIndex], useBandEnergy = useBandEnergy)
@@ -120,6 +138,9 @@ fun App() {
                     onAssetIndexChange = { assetIndex = it },
                     useBandEnergy = useBandEnergy,
                     onUseBandEnergyChange = { useBandEnergy = it },
+                    colorPresets = COLOR_PRESETS,
+                    colorIndex = colorIndex,
+                    onColorIndexChange = { colorIndex = it },
                     onTogglePlayPause = { viewModel.togglePlayPause() },
                     onStop = { viewModel.stop() },
                 )
@@ -144,6 +165,9 @@ fun App() {
                     onAssetIndexChange = { assetIndex = it },
                     useBandEnergy = useBandEnergy,
                     onUseBandEnergyChange = { useBandEnergy = it },
+                    colorPresets = COLOR_PRESETS,
+                    colorIndex = colorIndex,
+                    onColorIndexChange = { colorIndex = it },
                     onTogglePlayPause = { viewModel.togglePlayPause() },
                     onStop = { viewModel.stop() },
                 )
@@ -152,6 +176,7 @@ fun App() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DesktopLayout(
     state: PlayerState,
@@ -173,9 +198,15 @@ private fun DesktopLayout(
     onAssetIndexChange: (Int) -> Unit,
     useBandEnergy: Boolean,
     onUseBandEnergyChange: (Boolean) -> Unit,
+    colorPresets: List<RingColorPreset>,
+    colorIndex: Int,
+    onColorIndexChange: (Int) -> Unit,
     onTogglePlayPause: () -> Unit,
     onStop: () -> Unit,
 ) {
+    val accentColor = colorPresets[colorIndex].color
+    var showSourceSheet by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -188,7 +219,7 @@ private fun DesktopLayout(
             ) {
                 VoiceVisualizerRing(
                     volume = volume,
-                    color = Color(0xFF00FFFF),
+                    color = accentColor,
                     intensity = intensity,
                     thickness = thickness,
                     glowSpread = glowSpread,
@@ -196,20 +227,31 @@ private fun DesktopLayout(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { showSourceSheet = true }) {
+                    Icon(Icons.Filled.LibraryMusic, contentDescription = "Source", tint = accentColor)
+                }
                 Button(
                     onClick = onTogglePlayPause,
                     enabled = state is PlayerState.Ready ||
                         state is PlayerState.Playing ||
                         state is PlayerState.Paused,
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.copy(alpha = 0.2f)),
                 ) {
-                    Text(if (state is PlayerState.Playing) "Pause" else "Play")
+                    Text(
+                        if (state is PlayerState.Playing) "Pause" else "Play",
+                        color = accentColor,
+                    )
                 }
                 Button(
                     onClick = onStop,
                     enabled = state is PlayerState.Playing || state is PlayerState.Paused,
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor.copy(alpha = 0.2f)),
                 ) {
-                    Text("Stop")
+                    Text("Stop", color = accentColor)
                 }
             }
         }
@@ -228,6 +270,7 @@ private fun DesktopLayout(
                 frameFps = frameFps,
                 drawFps = drawFps,
                 drawFpsMeter = drawFpsMeter,
+                accentColor = accentColor,
             )
         }
 
@@ -243,12 +286,50 @@ private fun DesktopLayout(
                 onThicknessChange = onThicknessChange,
                 glowSpread = glowSpread,
                 onGlowSpreadChange = onGlowSpreadChange,
-                assetPaths = assetPaths,
-                assetIndex = assetIndex,
-                onAssetIndexChange = onAssetIndexChange,
-                useBandEnergy = useBandEnergy,
-                onUseBandEnergyChange = onUseBandEnergyChange,
+                colorPresets = colorPresets,
+                colorIndex = colorIndex,
+                onColorIndexChange = onColorIndexChange,
+                accentColor = accentColor,
             )
+        }
+    }
+
+    if (showSourceSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSourceSheet = false },
+            containerColor = Color(0xFF1A1F2E),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                AssetSelector(
+                    assetPaths = assetPaths,
+                    assetIndex = assetIndex,
+                    onAssetIndexChange = onAssetIndexChange,
+                    accentColor = accentColor,
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "band-energy",
+                        color = Color(0xFFE5E7EB),
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = useBandEnergy,
+                        onCheckedChange = onUseBandEnergyChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = accentColor,
+                            checkedTrackColor = accentColor.copy(alpha = 0.33f),
+                            uncheckedThumbColor = Color(0xFFE5E7EB),
+                            uncheckedTrackColor = Color(0x331F2937),
+                        ),
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
         }
     }
 }
@@ -275,112 +356,100 @@ private fun MobileLayout(
     onAssetIndexChange: (Int) -> Unit,
     useBandEnergy: Boolean,
     onUseBandEnergyChange: (Boolean) -> Unit,
+    colorPresets: List<RingColorPreset>,
+    colorIndex: Int,
+    onColorIndexChange: (Int) -> Unit,
     onTogglePlayPause: () -> Unit,
     onStop: () -> Unit,
 ) {
+    val accentColor = colorPresets[colorIndex].color
     var showSourceSheet by remember { mutableStateOf(false) }
+    var showColorSheet by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
+        modifier = Modifier.fillMaxSize().padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    volume
-                    drawFpsMeter.tick()
-                }
-                VoiceVisualizerRing(
-                    volume = volume,
-                    color = Color(0xFF00FFFF),
-                    intensity = intensity,
-                    thickness = thickness,
-                    glowSpread = glowSpread,
-                    modifier = Modifier.fillMaxSize(),
-                )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                volume
+                drawFpsMeter.tick()
+            }
+            VoiceVisualizerRing(
+                volume = volume,
+                color = accentColor,
+                intensity = intensity,
+                thickness = thickness,
+                glowSpread = glowSpread,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("pos: ${positionMs.toString().padStart(6)} ms", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+                Text("dur: ${durationMs.toString().padStart(6)} ms", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("vol: $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+                Text("fps vol: ${volumeFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("fps frame: ${frameFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
+                Text("fps draw: ${drawFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = { showSourceSheet = true }) {
+                Icon(Icons.Filled.LibraryMusic, contentDescription = "Source", tint = accentColor)
             }
 
-            val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val playEnabled = state is PlayerState.Ready ||
+                    state is PlayerState.Playing ||
+                    state is PlayerState.Paused
+                val stopEnabled = state is PlayerState.Playing || state is PlayerState.Paused
 
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-            ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        "pos: ${positionMs.toString().padStart(6)} ms",
-                        color = Color(0xFFE5E7EB),
-                        fontFamily = FontFamily.Monospace,
-                    )
-                    Text(
-                        "dur: ${durationMs.toString().padStart(6)} ms",
-                        color = Color(0xFFE5E7EB),
-                        fontFamily = FontFamily.Monospace,
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("vol: $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
-                    Text("fps vol: ${volumeFps.fmt1()}", color = Color(0xFF22D3EE), fontFamily = FontFamily.Monospace)
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("fps frame: ${frameFps.fmt1()}", color = Color(0xFF22D3EE), fontFamily = FontFamily.Monospace)
-                    Text("fps draw: ${drawFps.fmt1()}", color = Color(0xFF22D3EE), fontFamily = FontFamily.Monospace)
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = { showSourceSheet = true }) {
+                IconButton(onClick = onTogglePlayPause, enabled = playEnabled) {
                     Icon(
-                        Icons.Filled.LibraryMusic,
-                        contentDescription = "Source",
-                        tint = Color(0xFF22D3EE),
+                        if (state is PlayerState.Playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (state is PlayerState.Playing) "Pause" else "Play",
+                        tint = if (playEnabled) accentColor else accentColor.copy(alpha = 0.38f),
                     )
                 }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val playEnabled = state is PlayerState.Ready ||
-                        state is PlayerState.Playing ||
-                        state is PlayerState.Paused
-                    val stopEnabled = state is PlayerState.Playing || state is PlayerState.Paused
-
-                    IconButton(
-                        onClick = onTogglePlayPause,
-                        enabled = playEnabled,
-                    ) {
-                        Icon(
-                            if (state is PlayerState.Playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = if (state is PlayerState.Playing) "Pause" else "Play",
-                            tint = if (playEnabled) Color(0xFF22D3EE) else Color(0xFF22D3EE).copy(alpha = 0.38f),
-                        )
-                    }
-                    IconButton(
-                        onClick = onStop,
-                        enabled = stopEnabled,
-                    ) {
-                        Icon(
-                            Icons.Filled.Stop,
-                            contentDescription = "Stop",
-                            tint = if (stopEnabled) Color(0xFF22D3EE) else Color(0xFF22D3EE).copy(alpha = 0.38f),
-                        )
-                    }
+                IconButton(onClick = onStop, enabled = stopEnabled) {
+                    Icon(
+                        Icons.Filled.Stop,
+                        contentDescription = "Stop",
+                        tint = if (stopEnabled) accentColor else accentColor.copy(alpha = 0.38f),
+                    )
                 }
+            }
 
+            Row {
+                IconButton(onClick = { showColorSheet = true }) {
+                    Icon(Icons.Filled.Palette, contentDescription = "Color", tint = accentColor)
+                }
                 IconButton(onClick = { showSettingsSheet = true }) {
-                    Icon(
-                        Icons.Filled.Tune,
-                        contentDescription = "Settings",
-                        tint = Color(0xFF22D3EE),
-                    )
+                    Icon(Icons.Filled.Tune, contentDescription = "Settings", tint = accentColor)
                 }
             }
         }
@@ -396,6 +465,7 @@ private fun MobileLayout(
                     assetPaths = assetPaths,
                     assetIndex = assetIndex,
                     onAssetIndexChange = onAssetIndexChange,
+                    accentColor = accentColor,
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(
@@ -412,13 +482,32 @@ private fun MobileLayout(
                         checked = useBandEnergy,
                         onCheckedChange = onUseBandEnergyChange,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFF22D3EE),
-                            checkedTrackColor = Color(0x5522D3EE),
+                            checkedThumbColor = accentColor,
+                            checkedTrackColor = accentColor.copy(alpha = 0.33f),
                             uncheckedThumbColor = Color(0xFFE5E7EB),
                             uncheckedTrackColor = Color(0x331F2937),
                         ),
                     )
                 }
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+
+    if (showColorSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showColorSheet = false },
+            containerColor = Color(0xFF1A1F2E),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("color", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+                Spacer(Modifier.height(16.dp))
+                ColorChipRow(
+                    presets = colorPresets,
+                    selectedIndex = colorIndex,
+                    onSelect = { onColorIndexChange(it); showColorSheet = false },
+                )
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
@@ -429,12 +518,41 @@ private fun MobileLayout(
             containerColor = Color(0xFF1A1F2E),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                EffectSlider("intensity", intensity, 0f..3f, onIntensityChange)
+                EffectSlider("intensity", intensity, 0f..3f, onIntensityChange, accentColor)
                 Spacer(Modifier.height(6.dp))
-                EffectSlider("thickness", thickness, 0f..30f, onThicknessChange)
+                EffectSlider("thickness", thickness, 0f..30f, onThicknessChange, accentColor)
                 Spacer(Modifier.height(6.dp))
-                EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange)
+                EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange, accentColor)
+                Spacer(Modifier.height(16.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun ColorChipRow(
+    presets: List<RingColorPreset>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        presets.forEachIndexed { idx, preset ->
+            val selected = idx == selectedIndex
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .then(
+                        if (selected) Modifier.border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
+                        else Modifier
+                    )
+                    .padding(if (selected) 3.dp else 0.dp)
+                    .clip(CircleShape)
+                    .background(preset.color)
+                    .clickable { onSelect(idx) },
+            )
         }
     }
 }
@@ -449,6 +567,7 @@ private fun DebugPanel(
     frameFps: Float,
     drawFps: Float,
     drawFpsMeter: FpsMeter,
+    accentColor: Color,
 ) {
     Column(
         modifier = Modifier.width(260.dp),
@@ -457,35 +576,15 @@ private fun DebugPanel(
     ) {
         Text("state: ${state.label()}", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
         Spacer(Modifier.height(6.dp))
-        Text(
-            "pos:  ${positionMs.toString().padStart(6)} ms",
-            color = Color(0xFFE5E7EB),
-            fontFamily = FontFamily.Monospace,
-        )
-        Text(
-            "dur:  ${durationMs.toString().padStart(6)} ms",
-            color = Color(0xFFE5E7EB),
-            fontFamily = FontFamily.Monospace,
-        )
+        Text("pos:  ${positionMs.toString().padStart(6)} ms", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
+        Text("dur:  ${durationMs.toString().padStart(6)} ms", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
         Spacer(Modifier.height(6.dp))
         val volTxt = ((volume * 1000f).toInt() / 1000f).toString()
         Text("vol:  $volTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
         Spacer(Modifier.height(6.dp))
-        Text(
-            "fps volume: ${volumeFps.fmt1()}",
-            color = Color(0xFF22D3EE),
-            fontFamily = FontFamily.Monospace,
-        )
-        Text(
-            "fps frame:  ${frameFps.fmt1()}",
-            color = Color(0xFF22D3EE),
-            fontFamily = FontFamily.Monospace,
-        )
-        Text(
-            "fps draw:   ${drawFps.fmt1()}",
-            color = Color(0xFF22D3EE),
-            fontFamily = FontFamily.Monospace,
-        )
+        Text("fps volume: ${volumeFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
+        Text("fps frame:  ${frameFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
+        Text("fps draw:   ${drawFps.fmt1()}", color = accentColor, fontFamily = FontFamily.Monospace)
         Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
@@ -497,7 +596,7 @@ private fun DebugPanel(
                 modifier = Modifier
                     .fillMaxWidth(volume.coerceIn(0f, 1f))
                     .fillMaxHeight()
-                    .background(Color(0xFF22D3EE)),
+                    .background(accentColor),
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -510,7 +609,7 @@ private fun DebugPanel(
             val v = volume.coerceIn(0f, 1f)
             drawFpsMeter.tick()
             drawCircle(
-                color = Color(0xFF22D3EE),
+                color = accentColor,
                 radius = 4f + v * 8f,
                 center = Offset(size.width / 2f, size.height / 2f),
             )
@@ -523,6 +622,7 @@ private fun AssetSelector(
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
+    accentColor: Color,
 ) {
     Column(horizontalAlignment = Alignment.Start) {
         assetPaths.forEachIndexed { idx, path ->
@@ -532,7 +632,7 @@ private fun AssetSelector(
                 onClick = { if (!selected) onAssetIndexChange(idx) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selected) Color(0xFF22D3EE) else Color(0x331F2937),
+                    containerColor = if (selected) accentColor else Color(0x331F2937),
                     contentColor = if (selected) Color(0xFF0A0F1C) else Color(0xFFE5E7EB),
                 ),
             ) {
@@ -551,60 +651,25 @@ private fun DebugEffectsPanel(
     onThicknessChange: (Float) -> Unit,
     glowSpread: Float,
     onGlowSpreadChange: (Float) -> Unit,
-    assetPaths: List<String>,
-    assetIndex: Int,
-    onAssetIndexChange: (Int) -> Unit,
-    useBandEnergy: Boolean,
-    onUseBandEnergyChange: (Boolean) -> Unit,
+    colorPresets: List<RingColorPreset>,
+    colorIndex: Int,
+    onColorIndexChange: (Int) -> Unit,
+    accentColor: Color,
 ) {
     Column(
         modifier = Modifier.width(260.dp),
         horizontalAlignment = Alignment.Start,
     ) {
-        AssetSelector(
-            assetPaths = assetPaths,
-            assetIndex = assetIndex,
-            onAssetIndexChange = onAssetIndexChange,
-        )
+        EffectSlider("intensity", intensity, 0f..3f, onIntensityChange, accentColor)
         Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "band-energy",
-                color = Color(0xFFE5E7EB),
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.weight(1f),
-            )
-            Switch(
-                checked = useBandEnergy,
-                onCheckedChange = onUseBandEnergyChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF22D3EE),
-                    checkedTrackColor = Color(0x5522D3EE),
-                    uncheckedThumbColor = Color(0xFFE5E7EB),
-                    uncheckedTrackColor = Color(0x331F2937),
-                ),
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        EffectSlider(
-            label = "intensity",
-            value = intensity,
-            valueRange = 0f..3f,
-            onValueChange = onIntensityChange,
-        )
+        EffectSlider("thickness", thickness, 0f..30f, onThicknessChange, accentColor)
         Spacer(Modifier.height(6.dp))
-        EffectSlider(
-            label = "thickness",
-            value = thickness,
-            valueRange = 0f..30f,
-            onValueChange = onThicknessChange,
-        )
-        Spacer(Modifier.height(6.dp))
-        EffectSlider(
-            label = "glowSpread",
-            value = glowSpread,
-            valueRange = 0f..3f,
-            onValueChange = onGlowSpreadChange,
+        EffectSlider("glowSpread", glowSpread, 0f..3f, onGlowSpreadChange, accentColor)
+        Spacer(Modifier.height(12.dp))
+        ColorChipRow(
+            presets = colorPresets,
+            selectedIndex = colorIndex,
+            onSelect = onColorIndexChange,
         )
     }
 }
@@ -615,20 +680,17 @@ private fun EffectSlider(
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
+    accentColor: Color,
 ) {
     val valTxt = ((value * 100f).toInt() / 100f).toString()
-    Text(
-        "$label: $valTxt",
-        color = Color(0xFFE5E7EB),
-        fontFamily = FontFamily.Monospace,
-    )
+    Text("$label: $valTxt", color = Color(0xFFE5E7EB), fontFamily = FontFamily.Monospace)
     Slider(
         value = value,
         onValueChange = onValueChange,
         valueRange = valueRange,
         colors = SliderDefaults.colors(
-            thumbColor = Color(0xFF22D3EE),
-            activeTrackColor = Color(0xFF22D3EE),
+            thumbColor = accentColor,
+            activeTrackColor = accentColor,
             inactiveTrackColor = Color(0x331F2937),
         ),
     )
