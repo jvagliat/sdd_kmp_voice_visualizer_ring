@@ -58,6 +58,20 @@ import androidx.compose.ui.graphics.Color
 //            pero requiere allocar bitmap(s) por frame y blur software;
 //            overkill para este efecto.
 //
+//   - VoiceVisualizerRingV6Gml51Cloudy — V4 con Cloudy en lugar de Modifier.blur.
+//       Usa key(blurTick) para forzar recreación de los canvases blureados a
+//       ~15fps. Ring nítido actualiza a 60fps completos.
+//
+//   - VoiceVisualizerRingV8 — V6 con smoothing de picos y brillo dinámico (T21+T22).
+//       T21: filtro paso-bajo en dos etapas (preSmoothed + lerp visual) →
+//            movimiento líquido y orgánico en apertura y cierre.
+//       T22: floor de targetBright bajado a 0.05f → glow respira con el volumen,
+//            se desvanece casi por completo en silencio.
+//
+//   Experimentos archivados en experiments/:
+//   - VoiceVisualizerRingV7 — keyframes circulares con protuberancia localizada.
+//       Descartado como rama principal; V6 es la base canónica.
+//
 //  Cada Vx arranca con un header propio documentando hipótesis, approach,
 //  drawPath count, problemas descubiertos y siguiente paso.
 //
@@ -78,7 +92,7 @@ fun VoiceVisualizerRing(
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    VoiceVisualizerRingV6Gml51Cloudy(
+    VoiceVisualizerRingV8(
         volume = volume,
         color = color,
         intensity = intensity,
