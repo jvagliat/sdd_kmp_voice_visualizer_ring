@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
@@ -102,6 +103,8 @@ fun App() {
         var blurRadius by remember { mutableStateOf(15f) }
         var relativeMotion by remember { mutableStateOf(false) }
         var layerFalloff by remember { mutableStateOf(0.2f) }
+        var inputSmoothing by remember { mutableStateOf(0.85f) }
+        var responsiveness by remember { mutableStateOf(0.15f) }
 
         var assetIndex by remember { mutableStateOf(0) }
         var filterVoiceFrequencies by remember { mutableStateOf(DEFAULT_FILTER_VOICE_FREQUENCIES) }
@@ -145,6 +148,10 @@ fun App() {
                     onRelativeMotionChange = { relativeMotion = it },
                     layerFalloff = layerFalloff,
                     onLayerFalloffChange = { layerFalloff = it },
+                    inputSmoothing = inputSmoothing,
+                    onInputSmoothingChange = { inputSmoothing = it },
+                    responsiveness = responsiveness,
+                    onResponsivenessChange = { responsiveness = it },
                     assetPaths = ASSET_PATHS,
                     assetIndex = assetIndex,
                     onAssetIndexChange = { assetIndex = it },
@@ -178,6 +185,10 @@ fun App() {
                     onRelativeMotionChange = { relativeMotion = it },
                     layerFalloff = layerFalloff,
                     onLayerFalloffChange = { layerFalloff = it },
+                    inputSmoothing = inputSmoothing,
+                    onInputSmoothingChange = { inputSmoothing = it },
+                    responsiveness = responsiveness,
+                    onResponsivenessChange = { responsiveness = it },
                     assetPaths = ASSET_PATHS,
                     assetIndex = assetIndex,
                     onAssetIndexChange = { assetIndex = it },
@@ -217,6 +228,10 @@ private fun DesktopLayout(
     onRelativeMotionChange: (Boolean) -> Unit,
     layerFalloff: Float,
     onLayerFalloffChange: (Float) -> Unit,
+    inputSmoothing: Float,
+    onInputSmoothingChange: (Float) -> Unit,
+    responsiveness: Float,
+    onResponsivenessChange: (Float) -> Unit,
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
@@ -232,6 +247,7 @@ private fun DesktopLayout(
     var showSourceSheet by remember { mutableStateOf(false) }
     var showColorSheet by remember { mutableStateOf(false) }
     var showEffectsSheet by remember { mutableStateOf(false) }
+    var showSmoothingSheet by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -252,6 +268,8 @@ private fun DesktopLayout(
                     blurRadius = blurRadius,
                     relativeMotion = relativeMotion,
                     layerFalloff = layerFalloff,
+                    inputSmoothing = inputSmoothing,
+                    responsiveness = responsiveness,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -287,6 +305,9 @@ private fun DesktopLayout(
                 }
                 IconButton(onClick = { showEffectsSheet = true }) {
                     Icon(Icons.Filled.Tune, contentDescription = "Effects", tint = accentColor)
+                }
+                IconButton(onClick = { showSmoothingSheet = true }) {
+                    Icon(Icons.Filled.GraphicEq, contentDescription = "Smoothing", tint = accentColor)
                 }
             }
         }
@@ -411,6 +432,21 @@ private fun DesktopLayout(
             }
         }
     }
+
+    if (showSmoothingSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSmoothingSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF1A1F2E),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EffectSlider("inputSmoothing", inputSmoothing, 0f..0.95f, onInputSmoothingChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("responsiveness", responsiveness, 0.01f..1f, onResponsivenessChange, accentColor)
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -436,6 +472,10 @@ private fun MobileLayout(
     onRelativeMotionChange: (Boolean) -> Unit,
     layerFalloff: Float,
     onLayerFalloffChange: (Float) -> Unit,
+    inputSmoothing: Float,
+    onInputSmoothingChange: (Float) -> Unit,
+    responsiveness: Float,
+    onResponsivenessChange: (Float) -> Unit,
     assetPaths: List<String>,
     assetIndex: Int,
     onAssetIndexChange: (Int) -> Unit,
@@ -451,6 +491,7 @@ private fun MobileLayout(
     var showSourceSheet by remember { mutableStateOf(false) }
     var showColorSheet by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var showSmoothingSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -472,6 +513,8 @@ private fun MobileLayout(
                 glowSpread = glowSpread,
                 blurRadius = blurRadius,
                 relativeMotion = relativeMotion,
+                inputSmoothing = inputSmoothing,
+                responsiveness = responsiveness,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -535,6 +578,9 @@ private fun MobileLayout(
                 }
                 IconButton(onClick = { showSettingsSheet = true }) {
                     Icon(Icons.Filled.Tune, contentDescription = "Settings", tint = accentColor)
+                }
+                IconButton(onClick = { showSmoothingSheet = true }) {
+                    Icon(Icons.Filled.GraphicEq, contentDescription = "Smoothing", tint = accentColor)
                 }
             }
         }
@@ -637,6 +683,21 @@ private fun MobileLayout(
                         ),
                     )
                 }
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+
+    if (showSmoothingSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSmoothingSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF1A1F2E),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                EffectSlider("inputSmoothing", inputSmoothing, 0f..0.95f, onInputSmoothingChange, accentColor)
+                Spacer(Modifier.height(6.dp))
+                EffectSlider("responsiveness", responsiveness, 0.01f..1f, onResponsivenessChange, accentColor)
                 Spacer(Modifier.height(16.dp))
             }
         }

@@ -68,6 +68,9 @@ import androidx.compose.ui.graphics.Color
 //       T22: floor de targetBright bajado a 0.05f → glow respira con el volumen,
 //            se desvanece casi por completo en silencio.
 //
+//   - VoiceVisualizerRingV9 — V8 con inputSmoothing y responsiveness como parámetros (T26).
+//       Expone las constantes de Stage 1 (decay) y Stage 2 (lerp) para ajuste en caliente.
+//
 //   Experimentos archivados en experiments/:
 //   - VoiceVisualizerRingV7 — keyframes circulares con protuberancia localizada.
 //       Descartado como rama principal; V6 es la base canónica.
@@ -89,10 +92,12 @@ fun VoiceVisualizerRing(
     blurRadius: Float = 15f,
     relativeMotion: Boolean = false,
     layerFalloff: Float = 0.2f,
+    inputSmoothing: Float = 0.85f,
+    responsiveness: Float = 0.15f,
     lowPerformanceMode: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    VoiceVisualizerRingV8(
+    VoiceVisualizerRingV9(
         volume = volume,
         color = color,
         intensity = intensity,
@@ -101,6 +106,8 @@ fun VoiceVisualizerRing(
         blurRadius = blurRadius,
         relativeMotion = relativeMotion,
         layerFalloff = layerFalloff,
+        inputSmoothing = inputSmoothing,
+        responsiveness = responsiveness,
         lowPerformanceMode = lowPerformanceMode,
         modifier = modifier,
     )
