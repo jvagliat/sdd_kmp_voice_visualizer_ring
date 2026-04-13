@@ -43,6 +43,7 @@ Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJs.
 - [x] **T10** Análisis en frío del prototipo HTML → `docs/html_analysis.md`. 13 efectos listados + tabla + elaboración en 5 bloques físicos (silueta, halo, multiplicidad, reactividad, smoothing). Síntesis: super-ellipse rotante de 8 s replicado 3 veces con phase offsets, halo gaussiano simétrico in/out, scale+opacity lerpeados desde FFT banda vocal media.
 - [x] **T11** Contraste HTML vs V4 → `docs/html_vs_v4.md`. Esqueleto 1:1 (morph + rotación + phase offsets + scale/brightness). Halo reimplementado con `Modifier.blur` sobre strokes en vez de `box-shadow` apilados. Gap funcional principal: RMS total vs FFT banda vocal (origen de T14).
 - [x] **T17** Selector de asset + toggle `band-energy` en `DebugEffectsPanel` (bottom-end) + re-load keyed en `LaunchedEffect(assetIndex, useBandEnergy)`. `PlayerViewModel.load()` hace stop-if-playing y resetea `positionMs`/`volume` antes de reparsear, para evitar que el listener mapee posición vieja sobre buckets nuevos. Verificado por el usuario en JVM desktop (captura adjunta).
+- [x] **T12** ¿VoiceVisualizerRing compatible con iOS? **Sí, en el plano de código.** En Compose Multiplatform los artefactos conservan el package `androidx.compose.*` pero están reempaquetados para multiplataforma (JetBrains). Todos los imports del ring (`foundation.Canvas`, `ui.graphics.Path`, `ui.draw.blur` + `BlurredEdgeTreatment.Unbounded`, `runtime.withFrameMillis`, `animation.core.CubicBezierEasing`, `ui.unit.dp`) viven en commonMain de CMP y compilan en iOS/JVM/wasmJs sin actuals. `Modifier.blur` está soportado en iOS desde CMP 1.6; `withFrameMillis` va contra `CADisplayLink` a 60 FPS. El pipeline de audio alrededor del ring **no** es iOS-ready (T5b `writeBytesToCache` iosMain stub `NotImplementedError`), pero eso es independiente del componente visual. Validación empírica en simulador iOS queda pendiente en **T19**.
 
 ## In progress
 - [ ] **T15 — Preprocesar nuevo WAV demo del cliente.** Subtareas:
@@ -63,25 +64,48 @@ Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJs.
   - [ ] **T16c** Verificación end-to-end en JVM desktop — pendiente usuario.
 
 ## Pending
-### T12 — iOS compatible? 
-VoiceVisualizerRing con los imports de androidx es compatible con iOS?
+### T19 — Validar empíricamente el ring en iOS sim
+T12 confirmó compatibilidad de código. Falta correr en simulador iOS y chequear los puntos que pueden fallar en runtime aunque compilen:
+- **`Modifier.blur` + `BlurredEdgeTreatment.Unbounded`**: verificar que el halo gaussiano se renderiza igual que en JVM (sin recortes en el bounding box, sin bandas duras). Es el efecto más "delicado" del V4.
+- **`withFrameMillis` / 60 FPS**: medir con los FpsMeter ya integrados (`fps frame` / `fps draw`). iOS usa `CADisplayLink` — esperar 60 estable, reportar si hay drops.
+- **Jitter del ticker de `volume`**: T6c subió a ~60Hz en JVM con un hack Windows-only. En iOS el ticker del plugin puede clampar a un piso mayor; medir `fps volume` y decidir si hace falta interpolación en el VM (ver blocker "Android/iOS tick rate").
+- **Costo de `Modifier.blur` en GPU iOS**: verificar que no tira FPS en devices más modestos (sim ≠ device real, idealmente probar en iPhone físico después).
+
+Depende de resolver antes el stub de `writeBytesToCache` en iosMain (o saltarlo pasando bytes directo al player desde commonMain si el plugin lo permite).
 
 ### T18 — Relayout mobile del harness
 El layout actual está pensado para desktop (1600×900 aprox): ring al centro con panel de métricas top-end y panel de controles bottom-end, ambos de 260.dp a la derecha. En mobile (pantalla angosta) eso no entra: los paneles comen el ring o se superponen.
 
 Objetivo: que la app sea usable en Android/iOS sin reimplementar el ring ni perder los controles de debug.
 
-Ideas (elegir en implementación):
-- Detectar viewport angosto (e.g. `maxWidth < 600.dp` vía `BoxWithConstraints`) y apilar verticalmente: ring arriba (aspecto cuadrado), controles + métricas debajo en una `Column` scrolleable.
-- En mobile los paneles de debug podrían ir plegados en un drawer / bottom sheet / tabs (métricas | selector | sliders).
-- Play/Stop siempre visibles (barra fija abajo).
-- Paneles desktop intactos cuando hay espacio: branchar por breakpoint, no reescribir.
+Decisiones tomadas:
+- Detección: `expect/actual isMobilePlatform(): Boolean`. Si mobile → siempre mobile. Si no, aspect ratio portrait → mobile, landscape → desktop. wasmJs sigue aspect ratio como desktop.
+- Paneles [src] y [⚙] → **BottomSheet** (no AlertDialog).
+- Sacar: fila "state:", barra de volumen, canvas drawFps. Métricas 2×3 arriba de controles.
+- Iconos Material para botones de source/sliders.
+- Cero cambios en VoiceVisualizerRing ni PlayerViewModel — solo App.kt + Platform actuals.
 
-Subtareas (por definir cuando se encare):
-1. **T18a** Probar en qué targets pasa (Android phone retrato, iOS sim). Capturar estado actual para referencia.
-2. **T18b** Introducir breakpoint (`BoxWithConstraints` en `App`) y layout mobile inicial — ring + controles apilados.
-3. **T18c** Decidir si los debug panels van detrás de un toggle (ej. ícono que abre drawer) o siempre visibles debajo del ring.
-4. **T18d** Verificación visual en ambos modos.
+Layout mobile (top→bottom):
+```
+┌─────────────────────┐
+│       RING          │  ← weight(1f), centrado, expandido
+│                     │
+├─────────────────────┤
+│ pos:..  dur:..      │  ← métricas 2 col × 3 filas
+│ vol:..  fps v:..    │
+│ fps f:.. fps d:..   │
+├─────────────────────┤
+│ [🎵] [▶][⏸][⏹] [⚙] │  ← iconos: source, play/pause/stop, sliders
+└─────────────────────┘
+[🎵] → BottomSheet: selector asset + switch band-energy
+[⚙]  → BottomSheet: sliders intensity/thickness/glowSpread
+```
+
+Subtareas:
+- [ ] **T18a** `expect/actual fun isMobilePlatform(): Boolean` — true en android/ios, false en jvm/wasmJs.
+- [ ] **T18b** Verificar que `material-icons-core` esté en deps (suele venir con Material3 CMP).
+- [ ] **T18c** Refactor App.kt: `BoxWithConstraints` + branch `useMobileLayout = isMobilePlatform() || (maxWidth < maxHeight)`. Extraer `DesktopLayout` (layout actual intacto). Crear `MobileLayout` con ring expandido + métricas 2×3 + barra iconos + BottomSheets.
+- [ ] **T18d** Verificación sin regresión desktop + prueba viewport angosto (usuario compila).
 
 ### T13 — Verificación end-to-end (por target, el usuario corre)
 Al terminar T7, pedir al usuario:
