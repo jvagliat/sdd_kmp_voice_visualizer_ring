@@ -36,6 +36,58 @@ KMP Compose. Targets: Android, iOS (arm64 + simulator), JVM (Win desktop), wasmJ
 
 ## Pending
 
+### T26 — V9: parametrizar smoothing (Stage 1 y Stage 2)
+
+**Objetivo:** exponer las constantes de suavizado de V8 como parámetros del composable y agregar sliders en un nuevo bottom sheet.
+
+**Cambios en `VoiceVisualizerRingV9.kt`** (fork de V8):
+- `inputSmoothing: Float = 0.85f` — decay de Stage 1 (`PRE_SMOOTH_DECAY`). Rango útil: 0.0–0.95.
+- `responsiveness: Float = 0.15f` — factor de Stage 2 (`LERP_FACTOR`). Rango útil: 0.01–1.0.
+- `PRE_SMOOTH_NEW` se deriva como `1f - inputSmoothing` (no es parámetro independiente).
+- Ambos se pasan al `LaunchedEffect` via `rememberUpdatedState` para que cambios en caliente sean efectivos sin reiniciar la animación.
+
+**Cambios en `App.kt`**:
+- Agregar estado `inputSmoothing` y `responsiveness` en `App()`.
+- Agregar un tercer bottom sheet (icono `Equalizer` o similar) en Desktop y Mobile con dos `EffectSlider`:
+  - `"inputSmoothing"`, rango `0f..0.95f`
+  - `"responsiveness"`, rango `0.01f..1f`
+- Dispatcher apunta a V9.
+
+**Criterio de done:** sliders funcionales en ambos layouts, V9 activo, valores por defecto idénticos al comportamiento de V8.
+
+---
+
+### T25 — Refactor de documentación
+
+**Objetivo:** dejar la base de código documentada para entrega al cliente.
+
+**Tres cambios coordinados:**
+
+1. **Crear `docs/bitacora_estrategias.md`**
+   - Centralizar el historial de estrategias actualmente disperso en los headers de V1..V8.
+   - Formato: una sección por versión — hipótesis, approach, drawPath count, problemas descubiertos, conclusión.
+   - Incluye el contenido actual del bloque de comentarios de `VoiceVisualizerRing.kt` (V1..V8) y los headers de cada `experiments/VoiceVisualizerRingVx.kt`.
+
+2. **Refactorizar `VoiceVisualizerRing.kt`**
+   - Reemplazar el bloque V1..V8 por una referencia a `docs/bitacora_estrategias.md`.
+   - Agregar documentación del contrato público: propósito del componente, comportamiento audio-reactivo, descripción de cada parámetro.
+   - Estilo: comentarios de bloque (no KDoc), como el estilo actual del archivo.
+
+3. **Documentar `VoiceVisualizerRingV8.kt` para el desarrollador cliente**
+   - Sin referencias a versiones anteriores ni a la bitácora.
+   - Cabecera: propósito y comportamiento visual del componente (qué ve el usuario).
+   - Sección parámetros: qué controla cada uno, rangos típicos, efectos visuales.
+   - Internals: una descripción por sección del código —
+     - Constantes y keyframes: qué representa cada grupo
+     - `VoiceVisualizerRingV8` composable: el loop de animación (`LaunchedEffect`), el filtro de suavizado, el modelo escala/brillo, la estructura de 3 canvases y el key-trick de Cloudy
+     - `BlobsCanvasV8`: cómo lee estado, cómo calcula escala y brillo por capa
+     - `buildBlobFrameV8`: interpolación de keyframes, normalización CSS de radios, construcción del path Bézier
+   - Estilo: comentarios de bloque en español, sin KDoc.
+
+**Criterio de done:** un desarrollador Kotlin/Compose sin contexto de este repo puede leer `VoiceVisualizerRingV8.kt` de arriba a abajo y entender qué hace cada parte antes de tocar una línea.
+
+---
+
 ### T24 — Verificación audio wasmJs (HTMLAudioElement)
 
 **Implementado:** `WasmAudioRecorderPlayer` reemplaza el timer ficticio por un `HTMLAudioElement` real.
