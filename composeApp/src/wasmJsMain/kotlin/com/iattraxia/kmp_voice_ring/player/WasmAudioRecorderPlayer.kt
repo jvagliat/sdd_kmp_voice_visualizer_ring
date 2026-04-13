@@ -31,7 +31,7 @@ private fun newAudioJs(src: String): JsAny? = js("new Audio(src)")
 /** Create an HTMLAudioElement with the given src (data: URL or http URL). */
 @Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
 private fun newAudio(src: String): JsAudio =
-    newAudioJs(src).unsafeCast<JsAudio>()
+    newAudioJs(src)!!.unsafeCast<JsAudio>()
 
 /**
  * wasmJs audio player backed by the browser's HTMLAudioElement.
