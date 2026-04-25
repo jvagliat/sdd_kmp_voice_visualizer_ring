@@ -68,6 +68,14 @@ in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and r
 
 ---
 
+## About This Project
+
+This project was developed using **Spec-Driven Development (SDD)**, directed via Claude Code with a Compose Multiplatform skill, in a short timeframe.
+
+The specs in `docs/specs/` document the SDD process applied. They were formalized after the initial development to serve as a reference for how SDD works on a stack that LLMs don't dominate (Kotlin Multiplatform / Compose Multiplatform). The development history is honest — the commit log reflects the actual progression; the specs reconstruct the reasoning behind each step.
+
+---
+
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
 [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
 [Kotlin/Wasm](https://kotl.in/wasm/)…
