@@ -65,7 +65,7 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
         // está bloqueado por la política de gesture. Awaiteamos para que el
         // rechazo se propague como excepción y runCatching lo capture como
         // Result.failure (en lugar de quedar en éxito con audio muteado).
-        audio.play().await()
+        audio.play().await<JsAny?>()
         startTicker(audio)
     }
 
@@ -83,7 +83,7 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
 
     override suspend fun resumePlaying(): Result<Unit> = runCatching {
         val audio = jsAudio ?: return@runCatching
-        audio.play().await()
+        audio.play().await<JsAny?>()
         startTicker(audio)
     }
 
