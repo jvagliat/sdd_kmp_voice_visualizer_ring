@@ -100,6 +100,15 @@ Run through `validation.md`:
 - When the user confirms the task is done, mark `[x]` in `docs/specs/roadmap.md`.
 - Commit with message referencing the task number.
 
+## Templates
+
+Blank templates live in `docs/specs/_task_templates/`:
+- `plan.md` — HOW to build it (grouped steps, files to touch).
+- `requirements.md` — WHAT to build (scope, decisions, context, out-of-scope).
+- `validation.md` — HOW TO VERIFY it's done (automated + manual checks + DoD).
+
+Use these as the starting point for every new task folder. Do not deviate from the section structure unless the task clearly requires it.
+
 ## Branching
 
 - Work on `main` with progressive, descriptive commits.
