@@ -96,6 +96,22 @@ class PlayerViewModel(
         }
     }
 
+    /**
+     * Intento de reproducción automática al abrir la app. Si el browser bloquea
+     * el autoplay (Promise rechazada por falta de user gesture), no marcamos
+     * Error: dejamos el state en Ready para que el usuario toque Play y arranque
+     * manualmente. En desktop/iOS/Android no debería fallar.
+     */
+    fun attemptAutoPlay() {
+        val path = cachedPath ?: return
+        scope.launch {
+            if (_state.value != PlayerState.Ready) return@launch
+            player.startPlaying(AudioSource.File(path))
+                .onSuccess { _state.value = PlayerState.Playing }
+            // onFailure: silencioso a propósito; queda en Ready.
+        }
+    }
+
     fun togglePlayPause() {
         val path = cachedPath ?: return
         scope.launch {

@@ -12,16 +12,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.await
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.js.Promise
 
 // Browser HTMLAudioElement surface we actually use
 private external interface JsAudio : JsAny {
     val currentTime: Double
     val duration: Double
     val ended: Boolean
-    fun play(): JsAny?
+    fun play(): Promise<JsAny?>
     fun pause()
 }
 
@@ -59,7 +61,11 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
 
         val audio = newAudio(src)
         jsAudio = audio
-        audio.play()
+        // play() devuelve una Promise; los browsers la rechazan cuando autoplay
+        // está bloqueado por la política de gesture. Awaiteamos para que el
+        // rechazo se propague como excepción y runCatching lo capture como
+        // Result.failure (en lugar de quedar en éxito con audio muteado).
+        audio.play().await()
         startTicker(audio)
     }
 
@@ -77,7 +83,7 @@ class WasmAudioRecorderPlayer : AudioRecorderPlayer {
 
     override suspend fun resumePlaying(): Result<Unit> = runCatching {
         val audio = jsAudio ?: return@runCatching
-        audio.play()
+        audio.play().await()
         startTicker(audio)
     }
 

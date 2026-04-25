@@ -115,7 +115,7 @@ fun App() {
             viewModel.load(ASSET_PATHS[assetIndex], filterVoiceFrequencies = filterVoiceFrequencies)
             if (!hasAutoPlayed) {
                 hasAutoPlayed = true
-                viewModel.togglePlayPause()
+                viewModel.attemptAutoPlay()
             }
         }
         LaunchedEffect(Unit) {
