@@ -6,7 +6,7 @@ Built with **Spec-Driven Development (SDD)** + **Claude Code** on a stack that L
 
 <img src="docs/demo_landscape.gif" width="100%" />
 
-**Try it now (no install):** [kmp-voice-visualizer-ring.web.app](https://kmp-voice-visualizer-ring.web.app/)
+**Try it now (no install):** [https://iattraxia.com/lab/ssd-kmp-voice-visualizer-ring/](https://iattraxia.com/lab/ssd-kmp-voice-visualizer-ring/)
 
 ---
 
