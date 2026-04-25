@@ -1,9 +1,11 @@
 package com.iattraxia.kmp_voice_ring
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import java.awt.Dimension
 
 fun main() {
     raiseWindowsTimerResolution()
@@ -14,6 +16,12 @@ fun main() {
             state = windowState,
             title = "VoiceVisualizerRing",
         ) {
+            // El JFrame que envuelve el Window hereda un minimumSize de AWT que
+            // impide arrastrar la ventana a anchos angostos tipo teléfono. Lo
+            // bajamos para poder grabar video en proporción 9:19.5 / 9:21.
+            LaunchedEffect(Unit) {
+                window.minimumSize = Dimension(240, 400)
+            }
             App()
         }
     }
