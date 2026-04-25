@@ -63,8 +63,8 @@ import com.iattraxia.kmp_voice_ring.player.PlayerViewModel
 import com.iattraxia.kmp_voice_ring.player.createPlayer
 
 private val ASSET_PATHS = listOf(
-    "files/audio/demo_voice_prototype.wav",
     "files/audio/Jan_Morgenstern_-_01_-_Prelude.wav",
+    "files/audio/demo_voice_prototype.wav",
 )
 private const val DEFAULT_FILTER_VOICE_FREQUENCIES = true
 
@@ -109,9 +109,14 @@ fun App() {
         var assetIndex by remember { mutableStateOf(0) }
         var filterVoiceFrequencies by remember { mutableStateOf(DEFAULT_FILTER_VOICE_FREQUENCIES) }
         var colorIndex by remember { mutableStateOf(DEFAULT_COLOR_INDEX) }
+        var hasAutoPlayed by remember { mutableStateOf(false) }
 
         LaunchedEffect(assetIndex, filterVoiceFrequencies) {
             viewModel.load(ASSET_PATHS[assetIndex], filterVoiceFrequencies = filterVoiceFrequencies)
+            if (!hasAutoPlayed) {
+                hasAutoPlayed = true
+                viewModel.togglePlayPause()
+            }
         }
         LaunchedEffect(Unit) {
             while (true) withFrameMillis { frameFpsMeter.tick() }
