@@ -4,7 +4,7 @@ An audio-reactive visualizer component for Kotlin Multiplatform — 3 organic bl
 
 Built with **Spec-Driven Development (SDD)** + **Claude Code** on a stack that LLMs don't dominate: **Kotlin Multiplatform / Compose Multiplatform**.
 
-![demo](docs/demo.gif)
+<video src="docs/demo.mp4" autoplay loop muted playsinline width="100%"></video>
 
 **Try it now (no install):** [kmp-voice-visualizer-ring.web.app](https://kmp-voice-visualizer-ring.web.app/)
 
