@@ -1,5 +1,11 @@
 # KMP Voice Visualizer Ring
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4.svg?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/compose-multiplatform/)
+[![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20Desktop%20%7C%20Web%20%7C%20iOS-2ea44f.svg)](#stack)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-FF6F00.svg)](https://iattraxia.com/lab/ssd-kmp-voice-visualizer-ring/)
+
 An audio-reactive visualizer component for Kotlin Multiplatform — 3 organic blobs forming a glowing ring that pulse and morph in sync with audio input.
 
 Built with **Spec-Driven Development (SDD)** + **Claude Code** on a stack that LLMs don't dominate: **Kotlin Multiplatform / Compose Multiplatform**.
