@@ -1,6 +1,12 @@
 # KMP Voice Visualizer Ring
 
-An audio-reactive visualizer component for Kotlin Multiplatform — 3 organic blobs with multi-layer glow that pulse and morph in sync with audio input.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose Multiplatform](https://img.shields.io/badge/Compose-Multiplatform-4285F4.svg?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/compose-multiplatform/)
+[![Platforms](https://img.shields.io/badge/Platforms-Android%20%7C%20Desktop%20%7C%20Web%20%7C%20iOS-2ea44f.svg)](#stack)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-FF6F00.svg)](https://iattraxia.com/lab/ssd-kmp-voice-visualizer-ring/)
+
+An audio-reactive visualizer component for Kotlin Multiplatform — 3 organic blobs forming a glowing ring that pulse and morph in sync with audio input.
 
 Built with **Spec-Driven Development (SDD)** + **Claude Code** on a stack that LLMs don't dominate: **Kotlin Multiplatform / Compose Multiplatform**.
 
@@ -10,11 +16,36 @@ Built with **Spec-Driven Development (SDD)** + **Claude Code** on a stack that L
 
 ---
 
+## Use It in Your App
+
+```kotlin
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.iattraxia.kmp_voice_ring.VoiceVisualizerRing
+
+@Composable
+fun MyScreen(volume: Float) {
+    VoiceVisualizerRing(
+        volume = volume,        // 0f..1f from your audio source (mic, file, FFT band)
+        color = Color.Cyan,
+        modifier = Modifier.size(300.dp),
+    )
+}
+```
+
+Optional parameters (with defaults): `intensity`, `thickness`, `glowSpread`, `blurRadius`, `inputSmoothing`, `responsiveness`, `layerFalloff`, `relativeMotion`, `lowPerformanceMode`.
+
+---
+
 ## Why This Repo Is Different
 
 Most "AI writes code" demos run on stacks that LLMs know inside out: React, Python, Node. This project tackles the harder case.
 
 **Kotlin Multiplatform has low representation in LLM training data.** Claude Code doesn't "just know" how to build this. Without clear specs, it gets lost. With well-written specs, it moves fast. The method — not the model — is what makes the difference.
+
+> The specs in this repo were formalized after the initial development to document the SDD process applied. The commit log reflects the actual progression; the specs reconstruct the reasoning behind each step. See [About This Project](#about-this-project) for the full context.
 
 This repo documents that method in full:
 
@@ -43,6 +74,8 @@ Full details in [`docs/research/bitacora_estrategias.md`](docs/research/bitacora
 ---
 
 ## Spec Structure
+
+> Folders are ordered by task index, not date — some tasks ran in parallel, so dates don't always increase monotonically.
 
 ```
 docs/specs/
@@ -75,7 +108,7 @@ docs/specs/
 | Tool | Role |
 |------|------|
 | **Spec-Driven Development** | Specs written before code. Constitution → task breakdown → plan/requirements/validation per task. |
-| **Claude Code** | Implementation engine. Directed by specs, not free-form prompting. |
+| **Claude Code (Opus 4.7)** | Implementation engine. Directed by specs, not free-form prompting. |
 | **Compose Multiplatform Skill** | Custom skill (`.claude/skills/jetpack-compose-expert-skill/`) providing Compose source code references to ground the model's output. |
 | **SDD Workflow Skill** | Custom skill (`.claude/skills/sdd-workflow-skill/`) that automates the task iteration cycle. |
 
@@ -111,7 +144,7 @@ docs/specs/
 .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
 ```
 
-**iOS:** Open `iosApp/` in Xcode and run.
+**iOS:** Open `iosApp/` in Xcode (compiles, runtime not yet validated on device).
 
 ---
 
@@ -120,3 +153,15 @@ docs/specs/
 This project was developed using **Spec-Driven Development (SDD)**, directed via Claude Code with a Compose Multiplatform skill, in a short timeframe.
 
 The specs in `docs/specs/` document the SDD process applied. They were formalized after the initial development to serve as a reference for how SDD works on a stack that LLMs don't dominate (Kotlin Multiplatform / Compose Multiplatform). The development history is honest — the commit log reflects the actual progression; the specs reconstruct the reasoning behind each step.
+
+---
+
+## Feedback & Contributions
+
+Issues, questions and PRs are welcome — especially around applying SDD to stacks that LLMs don't dominate. If you replicate this approach on another project, I'd love to hear about it.
+
+---
+
+## License
+
+[MIT](LICENSE) © Pablo Vagliati
