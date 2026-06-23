@@ -160,6 +160,8 @@ The specs in `docs/specs/` document the SDD process applied. They were formalize
 
 Issues, questions and PRs are welcome — especially around applying SDD to stacks that LLMs don't dominate. If you replicate this approach on another project, I'd love to hear about it.
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for ways to contribute, development setup, and the spec-driven workflow.
+
 ---
 
 ## License
